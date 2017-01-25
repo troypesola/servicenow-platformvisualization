@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_0081_pvis.VisClassUtil</api_name>
+        <client_callable>false</client_callable>
+        <description>Platform Visualization Utilities.</description>
+        <name>VisClassUtil</name>
+        <script><![CDATA[/*---------------------------------------------------
+* VisClassUtil
+*   Platform Visualization utilities for classes.
+*
+*   Creates JSON objects for D3 rendering.
+*
+*----------------------------------------------------
+*  Troy Pesola - troy@servicemanagementprof.com
+*----------------------------------------------------
+* Usage:
+*
+*/
+var VisClassUtil = Class.create();
+VisClassUtil.prototype = {
+  nodes: [],
+  links: [],
+  initialize: function(){
+    this.parse_type='Extensions';
+    this.nodes=[];
+    this.links=[];
+  },
+
+  parseExtensions: function(/* string */classname, /* boolean */do_cnt) {
+    /* initialize params */
+    classname = classname || '';
+    do_cnt = do_cnt || false;
+
+    /* re-initialize */
+    this.initialize();
+    this._parse(0,classname,do_cnt);
+  },
+
+  parseReferences: function(/* string */classname,/* boolean */do_cnt) {
+    /* initialize params */
+    classname = classname || '';
+    do_cnt = do_cnt || false;
+
+    /* re-initialize */
+    this.initialize();
+    this.parse_type='References';
+    this._parse(1,classname,do_cnt);
+  },
+  getNodes: function() { return this.nodes; },
+  getNodeJSON: function(/*string */spc) {
+    spc = spc || '';
+    return JSON.stringify(this.nodes,null,spc);
+  },
+  getLinks: function() { return this.links; },
+  getLinkJSON: function(/*string */spc) {
+    spc = spc || '';
+    return JSON.stringify(this.links,null,spc);
+  },
+  getForceJSON: function(/*string */spc) {
+    spc = spc || '';
+    return JSON.stringify({
+        'parse_type':this.parse_type,
+        'nodes':this.nodes,'links':this.links
+      },null,spc);
+  },
+
+  /*--------------------------------------------------------------*/
+  /* internal functions */
+  /*--------------------------------------------------------------*/
+
+  _parse: function(
+    /* integer */parse_type, /* 0=extensions, else refererences */
+    /* string */classname,
+    /* boolean */do_cnt
+  ) {
+    /* initialize params */
+    parse_type = parse_type || 0;
+    classname = classname || '';
+    do_cnt = do_cnt || false;
+
+    var node = {};
+
+    /* input classname can be single, or multiple */
+    if (classname!='') {
+      if (classname.indexOf(',')>=1) {
+        /* list - so create dummy base node */
+        /* create a dummy parent for the group */
+        this._doNode(parse_type,'','classgroup',false,-1);
+
+        /* now loop through the array of classes */
+        var classnames = classname.split(',');
+        for (var i=0;i<classnames.length; i++) {
+          /* parse this node */
+          node = this._doNode(parse_type,'classgroup',classnames[i], do_cnt,'.');
+        }
+      } else {
+        /* parse the node */
+        node = this._doNode(parse_type, '',classname,do_cnt);
+      }
+    }
+  },
+
+  _doNode: function (
+    /*integer */parse_type,
+    /*string */parent_classname,
+    /*string */classname,
+    /*boolean */do_cnt,
+    /*string (optional)*/alt_name
+  ) {
+    /* check the parameters */
+    parse_type = parse_type || 0;
+    parent_classname = parent_classname || '';
+    classname = classname || '';
+    do_cnt = do_cnt || false;
+    alt_name = alt_name || '';
+
+    /* initialize the object from parameters */
+    var node = {};
+    node.name = classname;
+    node.parent = parent_classname;
+    node.fields = [];
+    node.ref_flds = 0;
+    node.label = 'Class';
+    node.super_class = '';
+    node.sys_id = '-';
+
+    /* if the class already exists */
+    var nidx=this._nodeExists(classname);
+    if (nidx!=-1) {
+      if (parse_type==0 || alt_name=='') return;
+
+      /* assume this is a dup node - capture minimal info */
+      node.name = alt_name;
+      node.label = this.nodes[nidx].label;
+      node.index = this.nodes[nidx].index;
+      this.nodes.push(node);
+      return;
+    }
+
+    /* save this node */
+    nidx = this.nodes.push(node) - 1;
+    node.index = nidx;
+
+    /* get the database object info */
+    var grDBO = new GlideRecord('sys_db_object');
+    if (grDBO.get('name',classname)) {
+      node.label = ''+grDBO.label;
+      node.super_class = ''+grDBO.super_class;
+      node.sys_id = ''+grDBO.sys_id;
+    }
+
+    /* parse the fields */
+    var grD = new GlideRecord('sys_dictionary');
+    if (parse_type==0) {
+      /* get the fields only in this class */
+      grD.addQuery('name',classname);
+    } else {
+      /* get fields from all parent classes */
+      grD.addQuery('name','IN', this._getTables(node.sys_id));
+    }
+    grD.addNotNullQuery('element');
+    grD.addQuery('internal_type','!=','Collection');
+    grD.addQuery('element','NOT IN',
+      'sys_class_name,sys_created_by,sys_created_on,sys_domain,'+
+      'sys_domain_path,sys_id,sys_mod_count,sys_updated_by,sys_updated_on'
+    );
+    grD.query();
+    while (grD.next()) {
+      /* save the field information */
+      var fld = {};
+      fld.name = ''+grD.element;
+      fld.label = ''+grD.column_label;
+      fld.type = ''+grD.internal_type.getDisplayValue();
+      if (fld.type=='Reference') {
+        fld.reference = ''+grD.reference.name;
+        node.ref_flds++;
+      } else {
+        fld.reference = '';
+      }
+      node.fields.push(fld);
+    }
+
+    if (do_cnt) {
+      /* get the record count of this class */
+      var grCnt = new GlideAggregate(classname);
+      grCnt.addAggregate('COUNT');
+      grCnt.query();
+      if ((typeof grCnt.next == 'function') && grCnt.next())
+        node.cnt = grCnt.getAggregate('COUNT');
+      else node.cnt = 0;
+    } else {
+      node.cnt = -1;
+    }
+
+    /* update the node in the array */
+    this.nodes[nidx] = node;
+
+    /* parse related classes */
+    if (parse_type==0) {
+      /* find the extended tables */
+      var grChild = new GlideRecord('sys_db_object');
+      grChild.addQuery('super_class',node.sys_id)
+      grChild.query();
+      while (grChild.next()) {
+        this._doNode(parse_type, node.name,''+grChild.name, do_cnt);
+      }
+    } else {
+      /* parse referenced classes */
+      for (var i=0; i<node.fields.length;i++) {
+        var fld = node.fields[i];
+        if (fld.type!='Reference') { continue; }
+        this._doNode(parse_type,node.name,fld.reference,do_cnt,fld.name);
+        this._addLink(classname, fld.reference, fld.name);
+      }
+    }
+  },
+
+  _getTables:function(/*string*/classid) {
+    var t = [];
+    var gr = new GlideRecord('sys_db_object');
+    while ((classid!='') && gr.get(classid)) {
+      t.push(''+gr.name);
+      classid = ''+gr.super_class;
+    }
+    return t.join(',');
+  },
+
+  _nodeExists: function(/*string*/name) {
+    var i;
+    for (i=0;i<this.nodes.length;i++) {
+      if (this.nodes[i].name==name) { return i; }
+    }
+    return -1;
+  },
+
+  _addLink: function(/*string */src, /*string */dst, /*label */lbl) {
+    /* validate the params */
+    src = src || '';
+    dst = dst || '';
+    lbl = lbl || '';
+
+    var lidx = this._findLink(src,dst);
+    if (lidx<0) {
+      var link = {};
+      link.source = src;
+      link.target = dst;
+      link.value = 0;
+      link.labels = [];
+      lidx = this.links.push(link)-1;
+    }
+    this.links[lidx].value++;
+    this.links[lidx].labels.push(lbl);
+  },
+
+  _findLink: function(/*string */src, /*string */dst) {
+    for (var i=0;i<this.links.length;i++) {
+      if (this.links[i].source==src && this.links[i].target==dst) {
+        return i;
+      }
+    }
+    return -1;
+  },
+
+  type: 'VisClassUtil'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-01-19 23:55:38</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
+        <sys_mod_count>13</sys_mod_count>
+        <sys_name>VisClassUtil</sys_name>
+        <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
+        <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-01-25 18:36:53</sys_updated_on>
+    </sys_script_include>
+</record_update>

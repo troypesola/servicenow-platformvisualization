@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description>UI tools for d3 class tree rendering</description>
+        <global>false</global>
+        <name>x_0081_pvis.VisClassTree</name>
+        <script><![CDATA[/*
+* Platform Visualization - Client Tools for Class Tree
+*
+*----------------------------------------------------
+*  Troy Pesola - troy@servicemanagementprof.com
+*----------------------------------------------------
+* UI Script for processing D3 Class Trees
+*/
+var x_0081_pvis = x_0081_pvis || {};
+
+x_0081_pvis.VisClassTree = (function() {
+  "use strict";
+  /*----------------------------------------------------*/
+  /* Private Variables and Functions */
+  /*----------------------------------------------------*/
+  /* initialize the d3 variables */
+  var margin = {top:20,right:20,bottom:20,left:20},
+    heightFull = 480, widthFull = 640, /* starting dimensions */
+    height = heightFull - margin.top - margin.bottom,
+    width = widthFull - margin.left - margin.right,
+
+    /* node characteristics */
+    nodeTextMargin=13,nodeRadius=5,
+    nodeHeight = 25, nodeWidth = 31, charWidth=6.3,
+    nodeStroke='1px',nodeStrokeChildren='1.7px',
+    colors = {
+      node:  '#5c5c8a', /* node border */
+      flds: '#c2c2d6',  /* node fill with fields */
+      found: '#ff3300', /* node border when matched - and popup text */
+      found_flds: '#ffad99', /* node fill with match */
+      empty: '#fff', /* normal fill */
+      text: '#000'
+    };
+
+  var svg,tree,root,duration=750;
+  var parse_type='Extensions', node_clrs=[
+    "#015eff", "#0cc402", "#fc0a18", "#aea7a5", "#ff15ae", "#d99f07", "#11a5fe",
+    "#037e43", "#ba4455", "#d10aff", "#9354a6", "#7b6d2b", "#08bbbb", "#95b42d",
+    "#b54e04", "#ee74ff", "#2d7593", "#e19772", "#fa7fbe", "#fe035b", "#aea0db",
+    "#905e76", "#92b27a", "#03c262", "#878aff", "#4a7662", "#ff6757", "#fe8504",
+    "#9340e1", "#2a8602", "#07b6e5", "#d21170", "#526ab3", "#ff08e2", "#bb2ea7",
+    "#e4919f", "#09bf91", "#90624c", "#bba94a", "#a26c05", "#5c7605", "#df89e7",
+    "#b0487c", "#ee9345", "#70b458", "#b19b71", "#6b6d74", "#ec5206", "#85a7c7",
+    "#ff678c", "#b55b3e", "#8054cc", "#7eb0a0", "#c480b3", "#d9102d", "#5a783f",
+    "#fe66d2", "#bc13c8", "#62bd33", "#b8ab03", "#8f31ff", "#fd8581", "#049279",
+    "#74739c", "#0e6ad6", "#747151", "#01878d", "#0380bf", "#bf81fd", "#8ba1fb",
+    "#887a02", "#c09bb5", "#a97741", "#d04096", "#c19083", "#a583da", "#8ca149",
+    "#b16368", "#c23e37", "#fd7b40", "#d12153", "#b24cd2", "#56a66f", "#5dafbd",
+    "#78aceb", "#2375fe", "#d49f54", "#ea41d3", "#885e92", "#8468fd", "#cf4eff",
+    "#c93716", "#c563af", "#d66886", "#664dfd", "#468530", "#6d60be", "#fa8a64",
+    "#059843", "#ff55a1", "#638b8e", "#bd6d2e", "#ff0f7a", "#3f93ff", "#ff5167",
+    "#8f9a7f", "#d68201", "#8b9054", "#fe4935", "#9d7e85", "#01a52b", "#59b99b",
+    "#ba5cc4", "#4bbe73", "#679925", "#b99023", "#408158", "#fa56fe", "#d6603b",
+    "#839004", "#d1786a", "#cb4170", "#897abb", "#8e8ca1", "#4197c2", "#a88e49",
+    "#157fd5", "#ba6bff", "#d20498", "#da6d10", "#7fb905", "#bd728d", "#fc0cfe",
+    "#f51590", "#e35c60", "#7e685e", "#5c65dc", "#6886c3", "#8faeb5", "#11b3f9",
+    "#ca95db", "#ab1de7", "#6c9a54", "#ea8bb4", "#a17da5", "#687ddc", "#ff0f37",
+    "#6e9b77", "#d71c02", "#93784e", "#9d8b7b", "#fc08c6", "#e974e4", "#44a298",
+    "#9f528d", "#9f69cf", "#f27cd2", "#0ec339", "#6f7a2d", "#aa72b7", "#0393ad",
+    "#43709f", "#ac4e69", "#707d71", "#db5d95", "#55bb4f", "#aeac62", "#a8af3e",
+    "#de9b38", "#b77b5d", "#fc4277", "#fe8299", "#b0409b", "#876910", "#d50fe5",
+    "#f547ae", "#a9a4c9", "#976565", "#049f67", "#e58acd", "#cea06d", "#60778f",
+    "#7a677e", "#d62f44", "#a3584a", "#d3686f", "#fe4103", "#539d01", "#0f7b6e",
+    "#667e5a", "#ff444e", "#938f37", "#8f74f4", "#a5981a", "#c18a96", "#9c5d38",
+    "#ac02ff", "#b86804", "#da581a", "#d150cf", "#da6a58", "#bf94fe", "#0fb9d3",
+    "#4b5de9", "#5b90a8", "#c86a9a", "#7a5faa", "#d44de5", "#d658bd", "#d27951",
+    "#2dad06", "#8cb64a", "#c40db3", "#9a601e", "#fb731d", "#e2948b", "#479d53",
+    "#a8ac7e", "#df773a", "#447b02", "#a2577e", "#4b83fd", "#f23dbe", "#f364b7",
+    "#d88c4f", "#6c713d", "#6d8bb4", "#479b36", "#ad8132", "#5e97e7", "#c59ac9",
+    "#974cbb", "#b64a44", "#f88d2e", "#9452dd", "#e04339", "#de4e6a", "#367680",
+    "#a748ff", "#f5603a", "#cb6ce7", "#ae9ded", "#d00a83", "#0f7f22", "#af5222",
+    "#888f91", "#62b2d5", "#a4b105", "#fd76a5", "#79b870", "#09bda9", "#ec4782",
+    "#689281", "#9f97fc", "#fc69eb", "#c09d9f", "#79b636", "#d795b4", "#7ab689",
+    "#c33279", "#3c7a3a", "#bf8204", "#b3a78f", "#c9a51e", "#a834d0", "#f20243",
+    "#bb6fc6", "#c5822f", "#dd0fce", "#9aada1", "#02885e", "#8d9de3", "#668931",
+    "#10a3ae", "#df0863", "#8d5aff", "#8e8a62", "#77945f", "#8c8cbe", "#a47f66",
+    "#93b08d", "#f18e76", "#8f79e1", "#b6766c", "#22a67e", "#cba081", "#5d55f2",
+    "#6768a1", "#488e76", "#fe7c6b", "#a4a8b9", "#6f7108", "#b84890", "#7385d2"];
+
+  /* ----- DIMENSIONS ------------------------------------------ */
+  var dims = {nodes:[0],pre:[0],post:[0],width:[0]};
+  function _dimCalc(lvl, obj) {
+    if (lvl==0) {
+      /* initialize the dims array */
+      dims = {nodes:[0],pre:[0],post:[0],width:[0]}
+    } else {
+      /* check if this level needs to be initialized */
+      if (dims.nodes[lvl]===undefined) dims.nodes[lvl]=0;
+      if (dims.pre[lvl]===undefined) dims.pre[lvl]=0;
+      if (dims.post[lvl]===undefined) dims.post[lvl]=0;
+      if (dims.width[lvl]===undefined) dims.width[lvl]=0;
+    }
+
+    if (obj.children) dims.nodes[lvl] += obj.children.length;
+    if (obj.children) {
+      if (dims.pre[lvl] < obj.data.name.length) dims.pre[lvl]=obj.data.name.length;
+      obj.children.forEach(function(d){ _dimCalc(lvl+1,d);});
+    }
+    else if (dims.post[lvl] < obj.data.name.length) dims.post[lvl]=obj.data.name.length;
+    dims.width[lvl]=dims.pre[lvl]+dims.post[lvl];
+  }
+
+  function _dimLevelY(lvl) {
+    /* validate lvl */
+    if (lvl >= dims.width.length) { lvl = dims.width.length-1; }
+
+    /* calculate the width for the level */
+    var y = (lvl+1)*nodeWidth;
+    var chars = dims.width.reduce(function(a,b,i){
+        var dy=0;
+        if (i<lvl) dy=dims.width[i];
+        else if (i==lvl) dy=dims.pre[i];
+        return a+dy;
+    });
+    return y+charWidth*chars;
+  }
+
+  /* ----- SEARCH ------------------------------------------ */
+  const SRCH_NAME     =0x01,
+        SRCH_LABEL    =0x02,
+        SRCH_FLD_NAME =0x04,
+        SRCH_FLD_LABEL=0x08,
+        SRCH_FLD_REF  =0x10,
+        SRCH_CNT      =0x20;
+
+  var srch = {found:0,foundFlds:0, nodes:0,nodeFlds:0};
+
+  function _searchClear(obj) {
+    if (obj==root) {
+      d3.select(".pvis-popup").remove();
+      d3.selectAll('div#pvis_msg p').remove();
+      d3.select('div#pvis_tree').attr('found',null);
+      d3.select('div#pvis_tree').attr('foundFlds',null);
+
+      /* reset the search vars */
+      srch = {found:0,foundFlds:0, nodes:0,nodeFlds:0};
+    }
+    // clear field class info
+    if (obj.data.fields.length) {
+      obj.data.fields.forEach(function(fld){if (fld.class){fld.class=null;}});
+    }
+
+    if (obj.class) { obj.class=null; }
+
+    // clear the children
+    if (obj.children)
+      obj.children.forEach(function(d) { _searchClear(d);});
+    if (obj._allchildren)
+      obj._allchildren.forEach(function(d) { _searchClear(d);});
+  }
+
+  function _search(re,opts,obj,p){
+    /* initialize search */
+    if (obj==root) { _searchClear(obj); }
+
+    var rval=false;
+		if (_match(re,opts,obj)) {
+      /* found a match, add it */
+			p.push(obj); rval=true;
+		}
+    /* search children */
+		if(obj._allchildren) {
+			var children = obj._allchildren;
+			for(var i=0;i<children.length;i++) {
+        /* this path may match - keep it */
+				p.push(obj);
+				var found = _search(re,opts,children[i],p);
+				if(found){
+          /* keep this path */
+          p = found; rval=true;
+				}
+				else{
+          /* not found - drop this path */
+					p.pop();
+				}
+			}
+		}
+    return rval?p:false;
+  }
+
+  function _match(re,opts,obj){
+    var rval=false;
+
+    /* check if we are only searching with records and this class has */
+    if ((!(opts&SRCH_CNT)) ||
+         ((opts&SRCH_CNT) && (obj.data.cnt!='0'))) {
+      /* check regEx against the different fields */
+      srch.nodes++;
+      if (((opts&SRCH_NAME) && re.test(obj.data.name )) ||
+          ((opts&SRCH_LABEL) && re.test(obj.data.label))) {
+        /* found a node match */
+        srch.found++;
+        rval=true;
+      }
+
+      /* search the field information */
+      var fldMatch=false;
+      for (var i=0; i<obj.data.fields.length; i++) {
+        srch.nodeFlds++;
+        if (((opts&SRCH_FLD_NAME) && re.test(obj.data.fields[i].name))||
+            ((opts&SRCH_FLD_LABEL) && re.test(obj.data.fields[i].label))||
+            ((opts&SRCH_FLD_REF) && re.test(obj.data.fields[i].reference))) {
+          /* found a field match */
+          obj.data.fields[i].class='found';
+          fldMatch=true;
+          srch.foundFlds++;
+        }
+      }
+    }
+
+    if (rval){
+      obj.class = fldMatch? 'found_both' : 'found';
+    } else {
+      if (fldMatch) {
+        obj.class='found_flds';
+        rval=true;
+      } else {
+        obj.class=null;
+      }
+    }
+    return rval;
+  }
+
+  function _openPaths(paths) {
+    /* first collapse the tree */
+    _collapse(root);
+
+    for(var i=paths.length-1; i>0;i--) {
+      /* if not root */
+      if(paths[i].id !== "1") {
+        if (paths[i].parent) {
+          if (!paths[i].parent.children) paths[i].parent.children=[];
+          if (paths[i].parent.children.indexOf(paths[i])==-1) {
+            /* add this child to the visible children */
+            paths[i].parent.children.push(paths[i]);
+          }
+        }
+      }
+    }
+  }
+
+  /* ----- CHILDREN ------------------------------------------ */
+  function _saveAllChildren(obj) {
+    if (obj.children){
+      obj._allchildren = obj.children;
+      obj.children.forEach(function(d){_saveAllChildren(d);});
+    }
+  }
+
+  function _collapse(d) {
+    if (d.children) {
+      d._children = d._allchildren;
+      d._children.forEach(_collapse);
+      d.children = null;
+    }
+  }
+
+  function _expand(d) {
+    if (d._allchildren) {
+      d.children = d._allchildren;
+      d.children.forEach(_expand);
+      d._children = null;
+    }
+  }
+
+  /* ----- POPUP ------------------------------------------ */
+  function _contextMenu(that, context, d, i) {
+    var popup;
+    if (!d3.select(".pvis-popup").empty()) {
+      d3.select(".pvis-popup").remove();
+      d3.event.preventDefault();
+    } else {
+      var d3_target = d3.select(that);
+      d = d3_target.datum();
+      if (d3_target.classed("node") && (typeof d === 'object')) {
+        d3.event.preventDefault();
+        d3.event.stopPropagation();
+
+        /* Build the popup */
+        var canvas = d3.select("body");
+        var mousePosition = d3.mouse(canvas.node());
+
+        popup = canvas.append("div")
+          .attr("class", "pvis-popup")
+          .style("left", mousePosition[0] + "px")
+          .style("top", mousePosition[1] + "px");
+        popup.append("h2").text(
+          d.data.label+"("+d.data.name+")");
+        var node_desc = '';
+        if (parse_type=='Extensions') {
+          node_desc += (d._allchildren ?
+            ''+d._allchildren.length+' sub-classes, ':
+            ' no sub-classes, ');
+        } else {
+          node_desc += (d.data.ref_flds ?
+            ''+d.data.ref_flds+' referenced-classes, ':
+            ' no referenced-classes, ');
+        }
+        node_desc += (d.data.cnt && d.data.cnt>0 ?
+              d.data.cnt+' records, ' : ' no records, ')+
+            (d.data.fields && d.data.fields.length?
+               d.data.fields.length+' fields.':' no fields.');
+        popup.append('p').text(node_desc);
+        if (d.data.fields.length) {
+          var newUL = popup.append('ul');
+          for (var i=0;i<d.data.fields.length;i++){
+            var fld = d.data.fields[i];
+            newUL.append('li').text(
+                fld.label+"("+fld.name+"): "+ fld.type+
+                ((fld.type=="Reference")?(' '+fld.reference):'')
+              )
+              .style("color", function(d) {
+                return fld.class==='found'? colors.found : colors.text;
+              });
+          }
+        }
+
+        if (popup.node().offsetWidth + mousePosition[0] > canvas.node().offsetWidth) {
+          popup.style("left","auto");
+          popup.style("right",0);
+        }
+      }
+    }
+  }
+
+  /* ----- TREE UPDATE ------------------------------------------ */
+  function _update(src) {
+    /* compute the height of tree */
+    _dimCalc(0,root);
+    var newHeight = d3.max(dims.nodes) * nodeHeight;
+    var newWidth = _dimLevelY(dims.nodes.length)
+                  + charWidth*dims.post[dims.post.length-1];
+
+    /* update the tree */
+    tree.size([newHeight, newWidth]);
+    d3.select('svg')
+      .style("height", (newHeight + margin.top + margin.bottom)+"px")
+      .style("width", (newWidth + margin.left + margin.right)+"px");
+
+    // Compute the new tree layout.
+    var treeData = tree(root);
+    var nodes = treeData.descendants(),
+        links = treeData.descendants().slice(1);
+
+    /* set the location */
+    nodes.forEach(function(d) {
+      d.y = _dimLevelY(d.depth);
+      d.x0 = d.x; d.y0=d.y;
+    });
+
+    /* ----- NODES ------------------------------------------ */
+    var node = svg.selectAll('g.node')
+      .data(nodes,function(d) { return d.id || (d.id = ++i); });
+
+    /*----- ENTER ------*/
+    var nodeEnter = node.enter().append('g')
+      .attr('class','node').attr('transform',function(d){
+        var pt = (d.parent)?{x:d.parent.x0,y:d.parent.y0}:{x:d.x0,y:d.y0};
+        return 'translate('+ pt.y + ','+ pt.x + ')';
+      })
+      .on('click',_click);
+
+    nodeEnter.append('circle').attr('class','node').attr('r',1e-6);
+
+    nodeEnter.append('text')
+      .attr('dy','.35em')
+      .text(function(d) { return d.data.name; });
+
+    nodeEnter.append("svg:title")
+  		.text(function(d){ return d.data.label + "("+d.data.name+")"+
+        ((d.data.cnt && d.data.cnt!='-1')?(' '+d.data.cnt):''); });
+
+    /*----- UPDATE ------*/
+    var nodeUpdate = nodeEnter.merge(node);
+    nodeUpdate.transition().duration(duration)
+      .attr('transform',function(d) {
+        return 'translate('+d.y+','+d.x+')';
+      });
+
+    nodeUpdate.select('text')
+      .attr('x',function(d) { return nodeTextMargin * (d.children ? -1:1); })
+      .attr('text-anchor',function(d) { return d.children ? 'end' : 'start'; })
+      .style('opacity',function(d){
+        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'});
+
+    nodeUpdate.select('circle').attr('r',nodeRadius)
+      .style('fill',function(d) {
+        var clr;
+        if (parse_type=='References') {
+          /* unique fill color per node index */
+          clr = node_clrs[d.data.index % node_clrs.length];
+        } else {
+          clr = colors.empty;
+          if (d.data.fields.length) clr = colors.flds;
+        }
+        if (d.class=='found_flds' || d.class=='found_both') clr = colors.found_flds;
+        return clr;
+      })
+      .style("stroke",function(d){
+        var clr=colors.node;
+        if ((d.class=='found') || (d.class=='found_both')) clr = colors.found;
+        return clr;
+      })
+      .style("stroke-width",function(d){
+        var sw=nodeStroke;
+        if (d._allchildren) {
+          /* node has children */
+          if (!d.children || (d.children.length < d._allchildren.length)) {
+            /* not all children are visible */
+            sw = nodeStrokeChildren;
+          }
+        }
+        return sw;
+      })
+      .style('opacity',function(d){
+        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'})
+      .attr('cursor','pointer');
+
+    /*----- EXIT ------*/
+    var nodeExit = node.exit().transition().duration(duration)
+      .attr('transform',function(d){ return 'translate('+d.y+','+d.x+')';})
+      .remove();
+
+    nodeExit.select('circle').attr('r',1e-6);
+    nodeExit.select('text').style('fill-opacity',1e-6);
+
+    /* setup the popup menu */
+    d3.select("div#pvis_tree").on('contextmenu',function (d,i) {
+      _contextMenu(this,'pvis_tree',d,i);
+    });
+    d3.selectAll(".node").on('contextmenu',function(d,i){
+      _contextMenu(this,'node',d,i);
+    });
+
+    /* ----- LINKS ------------------------------------------ */
+    var link = svg.selectAll('path.link')
+      .data(links,function(d) {return d.id; });
+
+    /*----- ENTER -----*/
+    var linkEnter = link.enter().insert('path','g')
+      .attr('class','link')
+      .attr('d',function(d) {
+        var pt = (d.parent)?{x:d.parent.x0,y:d.parent.y0}:{x:d.x0,y:d.y0};
+        return _diagonal(pt,pt);
+      });
+
+    /*----- UPDATE -----*/
+    var linkUpdate = linkEnter.merge(link);
+    linkUpdate.transition().duration(duration)
+      .attr('d',function(d){ return _diagonal(d,d.parent); });
+
+    /*----- EXIT -----*/
+    var linkExit = link.exit().transition().duration(duration)
+      .attr('d',function(d){ return _diagonal({x:d.x,y:d.y},{x:d.x,y:d.y}); })
+      .remove();
+  }
+
+  function _diagonal(dst,src) {
+    var path = '';
+    path += 'M'+ src.y + ',' + src.x;
+    path += 'C'+ (src.y + dst.y)/2 + ',' + src.x;
+    path += ' ' + (src.y + dst.y)/2 + ',' + dst.x;
+    path += ' ' + dst.y + ',' + dst.x;
+    return path;
+  }
+
+  function _click(d) {
+    if (d.children && (d.children.length!=d._allchildren.length)) {
+      /* not all children are visible */
+      d.children = d._allchildren;
+    } else if (d.children) {
+      d._children = d._allchildren;
+      d.children = null;
+    } else {
+      d.children = d._allchildren;
+      d._children = null;
+    }
+    _update(d);
+  }
+  /*----------------------------------------------------*/
+  /* return an object of Public Functions */
+  /*----------------------------------------------------*/
+  return {
+  Setup: function(/*object */json, /*object*/opts) {
+    /* initialize the params */
+    json = json || {parse_type:'Extensions',nodes:[],links:[]};
+    opts = opts || {};
+
+    svg = d3.select('div#pvis_tree')
+      .append('svg')
+        .attr('width',widthFull)
+        .attr('height',heightFull)
+      .append('g')
+        .attr('transform','translate('+margin.left+','+margin.top+')');
+
+    /* create a set of colors for reference lists */
+    parse_type = json.parse_type||'Extensions';
+    /* copy referenced data down */
+    if (parse_type=='References') {
+      /* find the reference node same index and label. */
+      var refs={};
+      json.nodes.forEach(function(d) {
+        if (d.sys_id=='-') {
+          var refd = null;
+          json.nodes.forEach(function(m){
+            if ((m.sys_id!='-') && (m.index==d.index)) { refd=m;}
+          });
+          if (refd) {
+            /* found the original - copy data over */
+            if (refs.hasOwnProperty(refd.name)) refs[refd.name]++;
+            else refs[refd.name]=0;
+            d.name = (d.name=='.'?'.':d.name+'.')+refd.name+'['+refs[refd.name]+']';
+            d.ref_flds = refd.ref_flds;
+            d.fields = refd.fields;
+            d.cnt = refd.cnt;
+          }
+        }
+      });
+    }
+
+    /* create the tree */
+    tree = d3.tree().size([height,width]);
+
+    /* stratify the data into a d3 tree */
+    root = d3.stratify()
+        .id(function(d) { return d.name; })
+        .parentId(function(d) { return d.parent; })
+        (json.nodes);
+    root.x0 = height / 2;
+    root.y0 = 0;
+
+    /* save the children nodes, for searching */
+    _saveAllChildren(root);
+
+    /* create the tree */
+    root.children.forEach(_collapse);
+    _update(root);
+  },
+  ExpandAll: function() { _expand(root); _update(root); },
+  CollapseAll: function() { _collapse(root); _update(root); },
+  SearchClear: function() {
+    _searchClear(root);
+    _update(root);
+    d3.select('#liSearchClr').style('display','none');
+  },
+  Search: function(/*string */sRegex,
+    /*boolean */do_names,do_labels,
+    /*boolean */do_fld_names,do_fld_labels,do_fld_refs,do_with_cnt
+  ) {
+    /* setup the regular expression */
+    try { var re = new RegExp(sRegex); }
+    catch(e) { return false; }
+
+    var opts=0;
+    if (do_names)      opts |= SRCH_NAME;
+    if (do_labels)     opts |= SRCH_LABEL;
+    if (do_fld_names)  opts |= SRCH_FLD_NAME;
+    if (do_fld_labels) opts |= SRCH_FLD_LABEL;
+    if (do_fld_refs)   opts |= SRCH_FLD_REF;
+    if (do_with_cnt)   opts |= SRCH_CNT;
+
+    /* traverse the tree searching each node */
+    var paths = _search(re,opts,root,[]);
+    _openPaths(paths);
+    _update(root);
+
+    /* update status attributes */
+    d3.select('div#pvis_tree').attr('foundCnt',srch.found?srch.found:null);
+    d3.select('div#pvis_tree').attr('foundFlds',srch.foundFlds?srch.foundFlds:null);
+    if (srch.nodes || srch.nodeFlds) {
+      d3.select('#liSearchClr').style('display',null);
+    } else {
+      d3.select('#liSearchClr').style('display','none');
+    }
+
+    /* update the status message */
+    d3.select('div#pvis_msg').append('p').text('Search for \''+sRegex+'\'.');
+    if (srch.nodes)
+      d3.select('div#pvis_msg').append('p').text(
+        'Found in '+srch.found+
+        '('+(srch.found/srch.nodes*100).toFixed(1)+'%)'+
+        ' of '+srch.nodes+' nodes '+
+        ' and in '+srch.foundFlds+
+        '('+(srch.foundFlds/srch.nodeFlds*100).toFixed(1)+'%)'+
+        ' of '+srch.nodeFlds+' fields.');
+  },
+  type:  "VisClassTree"
+  };
+})();
+]]></script>
+        <script_name>VisClassTree</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-01-25 06:14:10</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>x_0081_pvis.VisClassTree</sys_name>
+        <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
+        <sys_update_name>sys_ui_script_b4975959db60320062a5f11fbf961955</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-01-25 18:48:30</sys_updated_on>
+        <use_scoped_format>true</use_scoped_format>
+    </sys_ui_script>
+</record_update>

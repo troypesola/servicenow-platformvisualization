@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script><![CDATA[/*
+* Platform Visualization - Client Tools for Class Tree
+*
+*----------------------------------------------------
+*  Troy Pesola - troy@servicemanagementprof.com
+*----------------------------------------------------
+*/
+/*--------------------------------------------------------------------*/
+/*--------------------------------------------------------------------*/
+/*  JQuery and Prototype UI Fixes  */
+/*--------------------------------------------------------------------*/
+/*--------------------------------------------------------------------*/
+if (Prototype.BrowserFeatures.ElementExtensions) {
+  var disablePrototypeJS = function (method, pluginsToDisable) {
+    var handler = function (event) {
+      event.target[method] = undefined;
+      setTimeout(function () { delete event.target[method];}, 0);
+    };
+    pluginsToDisable.each(function (plugin) {
+      jQuery(window).on(method + '.bs.' + plugin, handler);
+    });
+  },
+  pluginsToDisable = ['collapse', 'dropdown', 'modal', 'tooltip', 'popover'];
+  disablePrototypeJS('show', pluginsToDisable);
+  disablePrototypeJS('hide', pluginsToDisable);
+}
+
+/*--------------------------------------------------------------------*/
+/*--------------------------------------------------------------------*/
+/*  UI  */
+/*--------------------------------------------------------------------*/
+/*--------------------------------------------------------------------*/
+/* create function to setup after scripts are loaded */
+function pvis_setup() {
+  var $j = jQuery.noConflict();
+  /* --- setup the d3 Tree */
+  x_0081_pvis.VisClassTree.Setup(graph,{});
+  $j('#menuExpand').click(function(){ x_0081_pvis.VisClassTree.ExpandAll();});
+  $j('#menuCollapse').click(function(){ x_0081_pvis.VisClassTree.CollapseAll();});
+  $j('#menuSearchClr').click(function(){ x_0081_pvis.VisClassTree.SearchClear();});
+
+  function pvis_search(t){
+    var txt = $j('#pvis-search-text').val();
+    var do_names = $j('#cbNames').is(':checked');
+    var do_labels = $j('#cbLabels').is(':checked');
+    var do_fld_names = $j('#cbFldNames').is(':checked');
+		var do_fld_labels = $j('#cbFldLabels').is(':checked');
+		var do_fld_refs = $j('#cbFldRefs').is(':checked');
+    var do_with_cnt = $j('#cbWithRecords').is(':checked');
+
+    x_0081_pvis.VisClassTree.Search(txt, do_names, do_labels,
+			do_fld_names, do_fld_labels, do_fld_refs, do_with_cnt);
+	}
+  $j('#pvis-search-btn').click(function(){ pvis_search('Search Button'); });
+  $j('#pvis-search-text').keypress(function (e) {
+    if (e.which == 13) {
+      pvis_search('Search Enter');
+      $j('.dropdown.open').removeClass('open');
+      return false;
+    }
+  });
+  $j('.dropdown-toggle').dropdown();
+  $j('.dropdown-menu input, .dropdown-menu label').click(function(e){
+  	if (e.stopPropagation) {/* normal browsers */e.stopPropagation();}
+  	else if (window.event) { /* IE */window.event.cancelBubble = true;}
+  });
+}
+ScriptLoader.getScripts([
+  'x_0081_pvis.jquery v3.1.1.jsdbx',
+  'x_0081_pvis.d3.v4.min.jsdbx',
+  'x_0081_pvis.bootstrap.min.jsdbx',
+  'x_0081_pvis.VisClassTree.jsdbx'
+], function(){
+  if (document.readyState === "complete" ||
+  (document.readyState !== "loading" && !document.documentElement.doScroll)) {
+    pvis_setup();
+  } else {
+    document.addEventListener("DOMContentLoaded", pvis_setup);
+  }
+});
+]]></client_script>
+        <description>Platform Visualization Class Tree</description>
+        <direct>false</direct>
+        <endpoint>x_0081_pvis_classtree.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<!--
+* Platform Visualization Application
+*
+*  Class Tree Visualization
+*
+*****************************************************
+*  Troy Pesola - troy@servicemanagementprof.com
+*****************************************************
+-->
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<g:evaluate var="jvar_pvis_classnames" jelly="true">
+  var pvis_classnames = "${RP.getParameterValue('cn')}";
+	if (pvis_classnames=='') {pvis_classnames='cmdb';}
+	pvis_classnames;
+</g:evaluate>
+<g:evaluate var="jvar_pvis_parse_type" jelly="true">
+  var pvis_parse_type = "${RP.getParameterValue('pt')}";
+	if (pvis_parse_type=='') {pvis_parse_type='Extensions';}
+  if (pvis_parse_type!='Extensions') { pvis_parse_type = 'References'; }
+	pvis_parse_type;
+</g:evaluate>
+<g:evaluate var="jvar_do_cnt" jelly="true">
+	var do_cnt = "${RP.getParameterValue('do_cnt')}";
+  do_cnt = do_cnt || 'true';
+	do_cnt = (do_cnt=='true' || do_cnt=='1')?true:false;
+	do_cnt;
+</g:evaluate>
+<g:evaluate var="jvar_vcu" jelly="true" object="true">
+	var vcu = new VisClassUtil();
+  if (pvis_parse_type=='Extensions') vcu.parseExtensions(pvis_classnames,do_cnt);
+  else vcu.parseReferences(pvis_classnames,do_cnt);
+	vcu;
+</g:evaluate>
+<g:evaluate var="jvar_graph" jelly="true">
+  var graph = vcu.getForceJSON();
+	graph;
+</g:evaluate>
+<style>
+.node text { font: 12px sans-serif; }
+.link { fill: none; stroke: #ccc; stroke-width: 1.5px; stroke-opacity: 0.5}
+.pvis-popup h2 { margin: 0 0 1rem 0; font-size: 14px; }
+.pvis-popup {
+  position: absolute; left: 0; top: 0;
+  background-color: #fff;
+  border: 1px #ccc solid;
+  border-radius: 6px;
+  box-shadow: #333 2px 2px 4px;
+  padding: 8px;
+  font-size: 12px;
+}
+</style>
+<div class="container-fluid">
+<div class="row"><div class="col-md-12">
+<div class="dropdown pull-right">
+  <button class="btn btn-default dropdown-toggle" type="button" id="pvis_dropdownmenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+    <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="pvis_dropdownmenu">
+    <li><div class="input-group">
+        <input type="text" class="form-control" id="pvis-search-text" placeholder="Search for..."></input>
+        <span class="input-group-addon" id="pvis-search-btn">
+          <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+        </span>
+      </div></li>
+    <li><input type="checkbox" id="cbNames" checked="checked"></input>Names</li>
+    <li><input type="checkbox" id="cbLabels" checked="checked"></input>Labels</li>
+    <li><input type="checkbox" id="cbFldNames" checked="checked"></input>Field Names</li>
+		<li><input type="checkbox" id="cbFldLabels" checked="checked"></input>Field Labels</li>
+		<li><input type="checkbox" id="cbFldRefs" checked="checked"></input>Field References</li>
+    <j:if test="${jvar_do_records}" >
+      <li><input type="checkbox" id="cbWithRecords"></input>Classes with Records</li>
+    </j:if>
+    <j:if test="${!jvar_do_records}" >
+      <input type="hidden" id="cbWithRecords"></input>
+    </j:if>
+    <li id='liSearchClr' style="display:none"><a id="menuSearchClr">Clear Previous Search</a></li>
+    <li role="separator" class="divider"></li>
+    <li><a id="menuExpand">Expand All</a></li>
+    <li><a id="menuCollapse">Collapse All</a></li>
+  </ul>
+</div>
+<h1>Class ${jvar_pvis_parse_type} Tree</h1>
+</div></div>
+<div class="row"><div class="col-md-12"><div id="pvis_msg"></div></div></div>
+<div class="row"><div class="col-md-12">
+  <div id="pvis_tree"></div>
+</div></div>
+</div>
+<script>var graph = ${jvar_graph};</script>
+</j:jelly>
+]]></html>
+        <name>classtree</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-01-25 06:07:24</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>9c955159db60320062a5f11fbf961987</sys_id>
+        <sys_mod_count>11</sys_mod_count>
+        <sys_name>classtree</sys_name>
+        <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
+        <sys_update_name>sys_ui_page_9c955159db60320062a5f11fbf961987</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-01-25 18:33:08</sys_updated_on>
+    </sys_ui_page>
+</record_update>
