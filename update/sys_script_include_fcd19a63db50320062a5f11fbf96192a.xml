@@ -5,7 +5,7 @@
         <active>true</active>
         <api_name>x_0081_pvis.VisClassUtil</api_name>
         <client_callable>false</client_callable>
-        <description>Platform Visualization Utilities.</description>
+        <description>Platform Visualization Utilities. </description>
         <name>VisClassUtil</name>
         <script><![CDATA[/*---------------------------------------------------
 * VisClassUtil
@@ -15,16 +15,21 @@
 *
 *----------------------------------------------------
 *  Troy Pesola - troy@servicemanagementprof.com
+*
+*  http://servicemanagementprof.com/platform-vis
 *----------------------------------------------------
 * Usage:
 *
 */
 var VisClassUtil = Class.create();
 VisClassUtil.prototype = {
+  parse_type:'',
+  group_cnt:0,
   nodes: [],
   links: [],
   initialize: function(){
     this.parse_type='Extensions';
+    this.flds=[];
     this.nodes=[];
     this.links=[];
   },
@@ -49,21 +54,21 @@ VisClassUtil.prototype = {
     this.parse_type='References';
     this._parse(1,classname,do_cnt);
   },
-  getNodes: function() { return this.nodes; },
-  getNodeJSON: function(/*string */spc) {
-    spc = spc || '';
-    return JSON.stringify(this.nodes,null,spc);
+  getGraph: function() {
+    return {
+      'parse_type':this.parse_type,
+      'nodes':this.nodes,
+      'flds':this.flds,
+      'links':this.links
+      };
   },
-  getLinks: function() { return this.links; },
-  getLinkJSON: function(/*string */spc) {
-    spc = spc || '';
-    return JSON.stringify(this.links,null,spc);
-  },
-  getForceJSON: function(/*string */spc) {
+  getGraphJSON: function(/*string */spc) {
     spc = spc || '';
     return JSON.stringify({
-        'parse_type':this.parse_type,
-        'nodes':this.nodes,'links':this.links
+      'parse_type':this.parse_type,
+      'nodes':this.nodes,
+      'flds':this.flds,
+      'links':this.links
       },null,spc);
   },
 
@@ -119,26 +124,47 @@ VisClassUtil.prototype = {
 
     /* initialize the object from parameters */
     var node = {};
-    node.name = classname;
-    node.parent = parent_classname;
-    node.fields = [];
-    node.ref_flds = 0;
-    node.label = 'Class';
-    node.super_class = '';
-    node.sys_id = '-';
+
+    /* set the sub_name */
+    var sub_name='';
+    if (parent_classname!='' && parent_classname!='classgroup' && alt_name!='') {
+      sub_name = parent_classname + '.' + alt_name;
+    }
 
     /* if the class already exists */
     var nidx=this._nodeExists(classname);
     if (nidx!=-1) {
-      if (parse_type==0 || alt_name=='') return;
+      if (parse_type==0) return;
 
-      /* assume this is a dup node - capture minimal info */
-      node.name = alt_name;
-      node.label = this.nodes[nidx].label;
-      node.index = this.nodes[nidx].index;
-      this.nodes.push(node);
+      /* duplicate this node */
+      node = JSON.parse(JSON.stringify(this.nodes[nidx]));
+
+      /* save the new node */
+      nidx = this.nodes.push(node)-1;
+      node.index = nidx;
+
+      /* update the specifics for this dup */
+      node.name = node.node_name+'.'+nidx;
+      node.parent = parent_classname;
+      node.sub_name = sub_name;
+
+      /* update back into the list */
+      this.nodes[nidx]=node;
       return;
     }
+
+    node.name = classname;/*unique name*/
+    node.parent = parent_classname;
+    node.node_name = classname;
+    node.sub_name = sub_name;
+
+    /* add to the fields array */
+    node.group_index = this.flds.push([])-1;
+
+    node.ref_flds = 0;
+    node.label = 'Class';
+    node.super_class = '';
+    node.sys_id = '-';
 
     /* save this node */
     nidx = this.nodes.push(node) - 1;
@@ -180,7 +206,7 @@ VisClassUtil.prototype = {
       } else {
         fld.reference = '';
       }
-      node.fields.push(fld);
+      this.flds[node.group_index].push(fld);
     }
 
     if (do_cnt) {
@@ -205,14 +231,14 @@ VisClassUtil.prototype = {
       grChild.addQuery('super_class',node.sys_id)
       grChild.query();
       while (grChild.next()) {
-        this._doNode(parse_type, node.name,''+grChild.name, do_cnt);
+        this._doNode(parse_type, node.node_name,''+grChild.name, do_cnt);
       }
     } else {
       /* parse referenced classes */
-      for (var i=0; i<node.fields.length;i++) {
-        var fld = node.fields[i];
+      for (var i=0; i<this.flds[node.group_index].length;i++) {
+        var fld = this.flds[node.group_index][i];
         if (fld.type!='Reference') { continue; }
-        this._doNode(parse_type,node.name,fld.reference,do_cnt,fld.name);
+        this._doNode(parse_type,node.node_name,fld.reference,do_cnt,fld.name);
         this._addLink(classname, fld.reference, fld.name);
       }
     }
@@ -231,7 +257,7 @@ VisClassUtil.prototype = {
   _nodeExists: function(/*string*/name) {
     var i;
     for (i=0;i<this.nodes.length;i++) {
-      if (this.nodes[i].name==name) { return i; }
+      if (this.nodes[i].node_name==name) { return i; }
     }
     return -1;
   },
@@ -268,18 +294,18 @@ VisClassUtil.prototype = {
 };
 ]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
-        <sys_created_by>admin</sys_created_by>
+        <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
         <sys_customer_update>true</sys_customer_update>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>13</sys_mod_count>
+        <sys_mod_count>30</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-01-25 18:36:53</sys_updated_on>
+        <sys_updated_by>troy.pesola</sys_updated_by>
+        <sys_updated_on>2017-01-29 20:17:17</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -2,7 +2,7 @@
 <record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
-        <description>UI tools for d3 class tree rendering</description>
+        <description>UI tools for d3 class tree rendering.</description>
         <global>false</global>
         <name>x_0081_pvis.VisClassTree</name>
         <script><![CDATA[/*
@@ -10,6 +10,8 @@
 *
 *----------------------------------------------------
 *  Troy Pesola - troy@servicemanagementprof.com
+*
+*  http://servicemanagementprof.com/platform-vis
 *----------------------------------------------------
 * UI Script for processing D3 Class Trees
 */
@@ -28,7 +30,9 @@ x_0081_pvis.VisClassTree = (function() {
 
     /* node characteristics */
     nodeTextMargin=13,nodeRadius=5,
-    nodeHeight = 25, nodeWidth = 31, charWidth=6.3,
+    nodeHeight = 20, nodeWidth = 31, charWidth=6.3,
+    nodeRefHeight = 35,/* height if reference tree */
+    extraHeight=0,/* used to scale to fit */
     nodeStroke='1px',nodeStrokeChildren='1.7px',
     colors = {
       node:  '#5c5c8a', /* node border */
@@ -40,7 +44,7 @@ x_0081_pvis.VisClassTree = (function() {
     };
 
   var svg,tree,root,duration=750;
-  var parse_type='Extensions', node_clrs=[
+  var flds=[], parse_type='Extensions', node_clrs=[
     "#015eff", "#0cc402", "#fc0a18", "#aea7a5", "#ff15ae", "#d99f07", "#11a5fe",
     "#037e43", "#ba4455", "#d10aff", "#9354a6", "#7b6d2b", "#08bbbb", "#95b42d",
     "#b54e04", "#ee74ff", "#2d7593", "#e19772", "#fa7fbe", "#fe035b", "#aea0db",
@@ -98,12 +102,15 @@ x_0081_pvis.VisClassTree = (function() {
       if (dims.width[lvl]===undefined) dims.width[lvl]=0;
     }
 
+    var nlen = (obj.data.node_name.length>obj.data.sub_name.length)?
+                obj.data.node_name.length:obj.data.sub_name.length;
+
     if (obj.children) dims.nodes[lvl] += obj.children.length;
     if (obj.children) {
-      if (dims.pre[lvl] < obj.data.name.length) dims.pre[lvl]=obj.data.name.length;
+      if (dims.pre[lvl] < nlen) dims.pre[lvl]=nlen;
       obj.children.forEach(function(d){ _dimCalc(lvl+1,d);});
     }
-    else if (dims.post[lvl] < obj.data.name.length) dims.post[lvl]=obj.data.name.length;
+    else if (dims.post[lvl] < nlen) dims.post[lvl]=nlen;
     dims.width[lvl]=dims.pre[lvl]+dims.post[lvl];
   }
 
@@ -124,11 +131,12 @@ x_0081_pvis.VisClassTree = (function() {
 
   /* ----- SEARCH ------------------------------------------ */
   const SRCH_NAME     =0x01,
-        SRCH_LABEL    =0x02,
-        SRCH_FLD_NAME =0x04,
-        SRCH_FLD_LABEL=0x08,
-        SRCH_FLD_REF  =0x10,
-        SRCH_CNT      =0x20;
+        SRCH_SUB_NAME =0x02,
+        SRCH_LABEL    =0x04,
+        SRCH_FLD_NAME =0x08,
+        SRCH_FLD_LABEL=0x10,
+        SRCH_FLD_REF  =0x20,
+        SRCH_CNT      =0x40;
 
   var srch = {found:0,foundFlds:0, nodes:0,nodeFlds:0};
 
@@ -143,8 +151,8 @@ x_0081_pvis.VisClassTree = (function() {
       srch = {found:0,foundFlds:0, nodes:0,nodeFlds:0};
     }
     // clear field class info
-    if (obj.data.fields.length) {
-      obj.data.fields.forEach(function(fld){if (fld.class){fld.class=null;}});
+    if (flds[obj.data.group_index].length) {
+      flds[obj.data.group_index].forEach(function(fld){if (fld.class){fld.class=null;}});
     }
 
     if (obj.class) { obj.class=null; }
@@ -193,7 +201,8 @@ x_0081_pvis.VisClassTree = (function() {
          ((opts&SRCH_CNT) && (obj.data.cnt!='0'))) {
       /* check regEx against the different fields */
       srch.nodes++;
-      if (((opts&SRCH_NAME) && re.test(obj.data.name )) ||
+      if (((opts&SRCH_NAME) && re.test(obj.data.node_name )) ||
+          ((opts&SRCH_SUB_NAME) && re.test(obj.data.sub_name )) ||
           ((opts&SRCH_LABEL) && re.test(obj.data.label))) {
         /* found a node match */
         srch.found++;
@@ -202,13 +211,14 @@ x_0081_pvis.VisClassTree = (function() {
 
       /* search the field information */
       var fldMatch=false;
-      for (var i=0; i<obj.data.fields.length; i++) {
+      for (var i=0; i<flds[obj.data.group_index].length; i++) {
         srch.nodeFlds++;
-        if (((opts&SRCH_FLD_NAME) && re.test(obj.data.fields[i].name))||
-            ((opts&SRCH_FLD_LABEL) && re.test(obj.data.fields[i].label))||
-            ((opts&SRCH_FLD_REF) && re.test(obj.data.fields[i].reference))) {
+        var fld = flds[obj.data.group_index][i];
+        if (((opts&SRCH_FLD_NAME) && re.test(fld.name))||
+            ((opts&SRCH_FLD_LABEL) && re.test(fld.label))||
+            ((opts&SRCH_FLD_REF) && re.test(fld.reference))) {
           /* found a field match */
-          obj.data.fields[i].class='found';
+          fld.class='found';
           fldMatch=true;
           srch.foundFlds++;
         }
@@ -255,6 +265,7 @@ x_0081_pvis.VisClassTree = (function() {
   }
 
   function _collapse(d) {
+    if (d==root) extraHeight=0;/*assume tree will fit */
     if (d.children) {
       d._children = d._allchildren;
       d._children.forEach(_collapse);
@@ -263,6 +274,7 @@ x_0081_pvis.VisClassTree = (function() {
   }
 
   function _expand(d) {
+    if (d==root) extraHeight=0;/*assume tree will fit */
     if (d._allchildren) {
       d.children = d._allchildren;
       d.children.forEach(_expand);
@@ -292,7 +304,7 @@ x_0081_pvis.VisClassTree = (function() {
           .style("left", mousePosition[0] + "px")
           .style("top", mousePosition[1] + "px");
         popup.append("h2").text(
-          d.data.label+"("+d.data.name+")");
+          d.data.label+"("+d.data.node_name+") "+d.data.sub_name);
         var node_desc = '';
         if (parse_type=='Extensions') {
           node_desc += (d._allchildren ?
@@ -305,13 +317,13 @@ x_0081_pvis.VisClassTree = (function() {
         }
         node_desc += (d.data.cnt && d.data.cnt>0 ?
               d.data.cnt+' records, ' : ' no records, ')+
-            (d.data.fields && d.data.fields.length?
-               d.data.fields.length+' fields.':' no fields.');
+            (flds[d.data.group_index].length?
+               flds[d.data.group_index].length+' fields.':' no fields.');
         popup.append('p').text(node_desc);
-        if (d.data.fields.length) {
+        if (flds[d.data.group_index].length) {
           var newUL = popup.append('ul');
-          for (var i=0;i<d.data.fields.length;i++){
-            var fld = d.data.fields[i];
+          for (var i=0;i<flds[d.data.group_index].length;i++){
+            var fld = flds[d.data.group_index][i];
             newUL.append('li').text(
                 fld.label+"("+fld.name+"): "+ fld.type+
                 ((fld.type=="Reference")?(' '+fld.reference):'')
@@ -330,19 +342,12 @@ x_0081_pvis.VisClassTree = (function() {
     }
   }
 
+
   /* ----- TREE UPDATE ------------------------------------------ */
   function _update(src) {
+
     /* compute the height of tree */
     _dimCalc(0,root);
-    var newHeight = d3.max(dims.nodes) * nodeHeight;
-    var newWidth = _dimLevelY(dims.nodes.length)
-                  + charWidth*dims.post[dims.post.length-1];
-
-    /* update the tree */
-    tree.size([newHeight, newWidth]);
-    d3.select('svg')
-      .style("height", (newHeight + margin.top + margin.bottom)+"px")
-      .style("width", (newWidth + margin.left + margin.right)+"px");
 
     // Compute the new tree layout.
     var treeData = tree(root);
@@ -362,19 +367,28 @@ x_0081_pvis.VisClassTree = (function() {
     /*----- ENTER ------*/
     var nodeEnter = node.enter().append('g')
       .attr('class','node').attr('transform',function(d){
+        d.display=true;
         var pt = (d.parent)?{x:d.parent.x0,y:d.parent.y0}:{x:d.x0,y:d.y0};
         return 'translate('+ pt.y + ','+ pt.x + ')';
       })
+      .attr('height',nodeHeight)
       .on('click',_click);
 
     nodeEnter.append('circle').attr('class','node').attr('r',1e-6);
 
-    nodeEnter.append('text')
-      .attr('dy','.35em')
-      .text(function(d) { return d.data.name; });
+    nodeEnter.each(function(d){
+      d3.select(this).append('text')
+      .attr('dy',(d.data.sub_name!='')?'-.18em':'0.35em')
+      .text(d.data.node_name);
+      if (d.data.sub_name!='') {
+        d3.select(this).append('text')
+        .attr('dy','.73em')
+        .text(d.data.sub_name);
+      }
+    });
 
     nodeEnter.append("svg:title")
-  		.text(function(d){ return d.data.label + "("+d.data.name+")"+
+  		.text(function(d){ return d.data.label + "("+d.data.node_name+")"+
         ((d.data.cnt && d.data.cnt!='-1')?(' '+d.data.cnt):''); });
 
     /*----- UPDATE ------*/
@@ -384,21 +398,23 @@ x_0081_pvis.VisClassTree = (function() {
         return 'translate('+d.y+','+d.x+')';
       });
 
-    nodeUpdate.select('text')
-      .attr('x',function(d) { return nodeTextMargin * (d.children ? -1:1); })
-      .attr('text-anchor',function(d) { return d.children ? 'end' : 'start'; })
-      .style('opacity',function(d){
-        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'});
+    nodeUpdate.selectAll('text').each(function(d){
+      d3.select(this)
+        .attr('x',function(d) { return nodeTextMargin * (d.children ? -1:1); })
+        .attr('text-anchor',function(d) { return d.children ? 'end' : 'start'; })
+        .style('opacity',function(d){
+          return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'});
+      });
 
     nodeUpdate.select('circle').attr('r',nodeRadius)
       .style('fill',function(d) {
         var clr;
         if (parse_type=='References') {
           /* unique fill color per node index */
-          clr = node_clrs[d.data.index % node_clrs.length];
+          clr = node_clrs[d.data.group_index % node_clrs.length];
         } else {
           clr = colors.empty;
-          if (d.data.fields.length) clr = colors.flds;
+          if (flds[d.data.group_index].length) clr = colors.flds;
         }
         if (d.class=='found_flds' || d.class=='found_both') clr = colors.found_flds;
         return clr;
@@ -421,15 +437,17 @@ x_0081_pvis.VisClassTree = (function() {
       })
       .style('opacity',function(d){
         return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'})
-      .attr('cursor','pointer');
+      .attr('cursor',function(d){return d._allchildren?'pointer':'auto';});
 
     /*----- EXIT ------*/
     var nodeExit = node.exit().transition().duration(duration)
-      .attr('transform',function(d){ return 'translate('+d.y+','+d.x+')';})
+      .attr('transform',function(d){ d.display=false; return 'translate('+d.y+','+d.x+')';})
       .remove();
 
     nodeExit.select('circle').attr('r',1e-6);
-    nodeExit.select('text').style('fill-opacity',1e-6);
+    nodeExit.selectAll('text').each(function(d){
+      d3.select(this).style('fill-opacity',1e-6);
+    });
 
     /* setup the popup menu */
     d3.select("div#pvis_tree").on('contextmenu',function (d,i) {
@@ -460,6 +478,32 @@ x_0081_pvis.VisClassTree = (function() {
     var linkExit = link.exit().transition().duration(duration)
       .attr('d',function(d){ return _diagonal({x:d.x,y:d.y},{x:d.x,y:d.y}); })
       .remove();
+
+    /* setup a callback to verify the node spacing */
+    d3.timeout(_nodeCheckSpacing,750);
+  }
+
+  var node_check_cnt=0;
+  function _nodeCheckSpacing(){
+    var minX=0, maxX=0;
+    d3.selectAll('g.node')
+      .filter(function(d){return d.display;})
+      .each(function(d){
+        if (d.x<minX) minX=d.x;
+        if (d.x>maxX) maxX=d.x;
+      });
+
+      var h = maxX - minX;
+      var w = _dimLevelY(dims.nodes.length)
+                    + charWidth*dims.post[dims.post.length-1];
+      var dx = margin.top - minX;
+
+      /* update the tree */
+      d3.select('svg')
+        .style("height", (h + margin.top + margin.bottom)+"px")
+        .style("width", (w + margin.left + margin.right)+"px");
+      d3.select('svg g').transition().duration(duration)
+        .attr('transform','translate(0,'+dx+')');
   }
 
   function _diagonal(dst,src) {
@@ -472,16 +516,21 @@ x_0081_pvis.VisClassTree = (function() {
   }
 
   function _click(d) {
+    var changed=false;
     if (d.children && (d.children.length!=d._allchildren.length)) {
       /* not all children are visible */
       d.children = d._allchildren;
+      changed=true;
     } else if (d.children) {
       d._children = d._allchildren;
       d.children = null;
+      changed=true;
     } else {
       d.children = d._allchildren;
       d._children = null;
+      changed=true;
     }
+    if (changed) extraHeight=0;/* first assume the tree will fit */
     _update(d);
   }
   /*----------------------------------------------------*/
@@ -490,8 +539,15 @@ x_0081_pvis.VisClassTree = (function() {
   return {
   Setup: function(/*object */json, /*object*/opts) {
     /* initialize the params */
-    json = json || {parse_type:'Extensions',nodes:[],links:[]};
+    if (!json) json = {parse_type:'Extensions',nodes:[],flds:[],links:[]};
     opts = opts || {};
+
+    /* save the array of fields */
+    flds = json.flds;
+
+    /* save the type of data - References or Extensions */
+    parse_type = json.parse_type||'Extensions';
+    if (parse_type=='References') nodeHeight = nodeRefHeight;
 
     svg = d3.select('div#pvis_tree')
       .append('svg')
@@ -500,33 +556,8 @@ x_0081_pvis.VisClassTree = (function() {
       .append('g')
         .attr('transform','translate('+margin.left+','+margin.top+')');
 
-    /* create a set of colors for reference lists */
-    parse_type = json.parse_type||'Extensions';
-    /* copy referenced data down */
-    if (parse_type=='References') {
-      /* find the reference node same index and label. */
-      var refs={};
-      json.nodes.forEach(function(d) {
-        if (d.sys_id=='-') {
-          var refd = null;
-          json.nodes.forEach(function(m){
-            if ((m.sys_id!='-') && (m.index==d.index)) { refd=m;}
-          });
-          if (refd) {
-            /* found the original - copy data over */
-            if (refs.hasOwnProperty(refd.name)) refs[refd.name]++;
-            else refs[refd.name]=0;
-            d.name = (d.name=='.'?'.':d.name+'.')+refd.name+'['+refs[refd.name]+']';
-            d.ref_flds = refd.ref_flds;
-            d.fields = refd.fields;
-            d.cnt = refd.cnt;
-          }
-        }
-      });
-    }
-
     /* create the tree */
-    tree = d3.tree().size([height,width]);
+    tree = d3.tree().nodeSize([nodeHeight,1]);
 
     /* stratify the data into a d3 tree */
     root = d3.stratify()
@@ -540,7 +571,7 @@ x_0081_pvis.VisClassTree = (function() {
     _saveAllChildren(root);
 
     /* create the tree */
-    root.children.forEach(_collapse);
+    if (root.children) root.children.forEach(_collapse);
     _update(root);
   },
   ExpandAll: function() { _expand(root); _update(root); },
@@ -551,7 +582,7 @@ x_0081_pvis.VisClassTree = (function() {
     d3.select('#liSearchClr').style('display','none');
   },
   Search: function(/*string */sRegex,
-    /*boolean */do_names,do_labels,
+    /*boolean */do_names,do_sub_names, do_labels,
     /*boolean */do_fld_names,do_fld_labels,do_fld_refs,do_with_cnt
   ) {
     /* setup the regular expression */
@@ -560,6 +591,7 @@ x_0081_pvis.VisClassTree = (function() {
 
     var opts=0;
     if (do_names)      opts |= SRCH_NAME;
+    if (do_sub_names)  opts |= SRCH_SUB_NAME;
     if (do_labels)     opts |= SRCH_LABEL;
     if (do_fld_names)  opts |= SRCH_FLD_NAME;
     if (do_fld_labels) opts |= SRCH_FLD_LABEL;
@@ -597,19 +629,19 @@ x_0081_pvis.VisClassTree = (function() {
 ]]></script>
         <script_name>VisClassTree</script_name>
         <sys_class_name>sys_ui_script</sys_class_name>
-        <sys_created_by>admin</sys_created_by>
+        <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:14:10</sys_created_on>
         <sys_customer_update>true</sys_customer_update>
         <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>86</sys_mod_count>
         <sys_name>x_0081_pvis.VisClassTree</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_ui_script_b4975959db60320062a5f11fbf961955</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-01-25 18:48:30</sys_updated_on>
+        <sys_updated_by>troy.pesola</sys_updated_by>
+        <sys_updated_on>2017-01-30 02:27:11</sys_updated_on>
         <use_scoped_format>true</use_scoped_format>
     </sys_ui_script>
 </record_update>
