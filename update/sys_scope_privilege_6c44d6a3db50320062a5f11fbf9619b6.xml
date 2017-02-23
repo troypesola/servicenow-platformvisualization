@@ -7,7 +7,7 @@
         <sys_class_name>sys_scope_privilege</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-01-20 00:04:52</sys_created_on>
-        <sys_customer_update>true</sys_customer_update>
+        <sys_customer_update>false</sys_customer_update>
         <sys_id>6c44d6a3db50320062a5f11fbf9619b6</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_name>cmdb_application_product_model</sys_name>

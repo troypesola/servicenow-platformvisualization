@@ -631,7 +631,7 @@ x_0081_pvis.VisClassTree = (function() {
         <sys_class_name>sys_ui_script</sys_class_name>
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:14:10</sys_created_on>
-        <sys_customer_update>true</sys_customer_update>
+        <sys_customer_update>false</sys_customer_update>
         <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
         <sys_mod_count>86</sys_mod_count>
         <sys_name>x_0081_pvis.VisClassTree</sys_name>

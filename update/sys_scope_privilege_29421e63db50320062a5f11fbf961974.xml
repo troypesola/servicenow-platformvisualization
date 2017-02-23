@@ -7,7 +7,7 @@
         <sys_class_name>sys_scope_privilege</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-01-19 23:56:12</sys_created_on>
-        <sys_customer_update>true</sys_customer_update>
+        <sys_customer_update>false</sys_customer_update>
         <sys_id>29421e63db50320062a5f11fbf961974</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_name>cmdb_ci_inf_software</sys_name>

@@ -17,7 +17,7 @@ this._l23_a=Math.sqrt(this._l23_2a=Math.pow(e*e+r*r,this._alpha))}switch(this._p
         <sys_class_name>sys_ui_script</sys_class_name>
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 15:59:24</sys_created_on>
-        <sys_customer_update>true</sys_customer_update>
+        <sys_customer_update>false</sys_customer_update>
         <sys_id>076e1fd5dbe0320062a5f11fbf96190a</sys_id>
         <sys_mod_count>2</sys_mod_count>
         <sys_name>x_0081_pvis.d3.v4.min</sys_name>
