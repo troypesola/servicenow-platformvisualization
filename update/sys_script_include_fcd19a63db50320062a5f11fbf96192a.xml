@@ -38,10 +38,12 @@ VisClassUtil.prototype = {
     /* initialize params */
     classname = classname || '';
     do_cnt = do_cnt || false;
+	gs.debug('TRP - parseExtensions');
 
     /* re-initialize */
     this.initialize();
     this._parse(0,classname,do_cnt);
+	gs.debug('TRP - parseExtensions done');
   },
 
   parseReferences: function(/* string */classname,/* boolean */do_cnt) {
@@ -64,12 +66,13 @@ VisClassUtil.prototype = {
   },
   getGraphJSON: function(/*string */spc) {
     spc = spc || '';
-    return JSON.stringify({
+    var json_str = JSON.stringify({
       'parse_type':this.parse_type,
       'nodes':this.nodes,
       'flds':this.flds,
       'links':this.links
       },null,spc);
+    return json_str;
   },
 
   /*--------------------------------------------------------------*/
@@ -296,16 +299,14 @@ VisClassUtil.prototype = {
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
-        <sys_customer_update>false</sys_customer_update>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>30</sys_mod_count>
+        <sys_mod_count>44</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
-        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
-        <sys_updated_by>troy.pesola</sys_updated_by>
-        <sys_updated_on>2017-01-29 20:17:17</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-11 19:00:46</sys_updated_on>
     </sys_script_include>
 </record_update>
