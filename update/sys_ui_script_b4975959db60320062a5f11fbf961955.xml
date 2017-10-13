@@ -44,6 +44,7 @@ x_0081_pvis.VisClassTree = (function() {
     };
 
   var svg,tree,root,duration=750;
+  var search_updated_after=null;
   var flds=[], parse_type='Extensions', node_clrs=[
     "#015eff", "#0cc402", "#fc0a18", "#aea7a5", "#ff15ae", "#d99f07", "#11a5fe",
     "#037e43", "#ba4455", "#d10aff", "#9354a6", "#7b6d2b", "#08bbbb", "#95b42d",
@@ -93,7 +94,7 @@ x_0081_pvis.VisClassTree = (function() {
   function _dimCalc(lvl, obj) {
     if (lvl==0) {
       /* initialize the dims array */
-      dims = {nodes:[0],pre:[0],post:[0],width:[0]}
+      dims = {nodes:[0],pre:[0],post:[0],width:[0]};
     } else {
       /* check if this level needs to be initialized */
       if (dims.nodes[lvl]===undefined) dims.nodes[lvl]=0;
@@ -130,13 +131,17 @@ x_0081_pvis.VisClassTree = (function() {
   }
 
   /* ----- SEARCH ------------------------------------------ */
-  const SRCH_NAME     =0x01,
-        SRCH_SUB_NAME =0x02,
-        SRCH_LABEL    =0x04,
-        SRCH_FLD_NAME =0x08,
-        SRCH_FLD_LABEL=0x10,
-        SRCH_FLD_REF  =0x20,
-        SRCH_CNT      =0x40;
+  var SRCH_NAME     =0x0001,
+      SRCH_SUB_NAME =0x0002,
+      SRCH_LABEL    =0x0004,
+      SRCH_FLD_NAME =0x0008,
+      SRCH_FLD_LABEL=0x0010,
+      SRCH_FLD_REF  =0x0020,
+      SRCH_CNT      =0x0040,
+      SRCH_INACT    =0x0080,
+      SRCH_CREATED  =0x0100,
+      SRCH_UPDATED  =0x0200,
+      SRCH_AFTER    =0x0400;
 
   var srch = {found:0,foundFlds:0, nodes:0,nodeFlds:0};
 
@@ -195,34 +200,62 @@ x_0081_pvis.VisClassTree = (function() {
 
   function _match(re,opts,obj){
     var rval=false;
+    var fldMatch=false;
+    var d2=null,d2_str='';
 
     /* check if we are only searching with records and this class has */
     if ((!(opts&SRCH_CNT)) ||
          ((opts&SRCH_CNT) && (obj.data.cnt!='0'))) {
       /* check regEx against the different fields */
       srch.nodes++;
+
+      if (opts&SRCH_AFTER) {
+        /* check the date */
+        d2_str = obj.data.updated;
+        d2=Date.parse(d2_str.substr(0,10));
+      }
+
       if (((opts&SRCH_NAME) && re.test(obj.data.node_name )) ||
           ((opts&SRCH_SUB_NAME) && re.test(obj.data.sub_name )) ||
-          ((opts&SRCH_LABEL) && re.test(obj.data.label))) {
-        /* found a node match */
-        srch.found++;
-        rval=true;
+          ((opts&SRCH_LABEL) && re.test(obj.data.label)) ||
+          ((opts&SRCH_CREATED) && re.test(obj.data.created_by)) ||
+          ((opts&SRCH_UPDATED) && re.test(obj.data.updated_by))
+        ) {
+        /* found a node match -- check if there is a date criteria */
+        if (!(opts&SRCH_AFTER)||((opts&SRCH_AFTER)&&(search_updated_after<=d2))) {
+            srch.found++;
+            rval=true;
+        }
       }
 
       /* search the field information */
-      var fldMatch=false;
       for (var i=0; i<flds[obj.data.group_index].length; i++) {
         srch.nodeFlds++;
         var fld = flds[obj.data.group_index][i];
+        /* do not search inactive fields, if excluded */
+        if (!(opts&SRCH_INACT) && (fld.active=='false'))
+          continue;
+
+        if (opts&SRCH_AFTER) {
+          /* check the date */
+          d2_str = fld.updated;
+          d2=Date.parse(d2_str.substr(0,10));
+        }
+
         if (((opts&SRCH_FLD_NAME) && re.test(fld.name))||
             ((opts&SRCH_FLD_LABEL) && re.test(fld.label))||
-            ((opts&SRCH_FLD_REF) && re.test(fld.reference))) {
-          /* found a field match */
-          fld.class='found';
-          fldMatch=true;
-          srch.foundFlds++;
+            ((opts&SRCH_FLD_REF) && re.test(fld.reference))||
+            ((opts&SRCH_CREATED) && re.test(fld.created_by)) ||
+            ((opts&SRCH_UPDATED) && re.test(fld.updated_by))
+          ) {
+            /* found a field match -- check if there is a date criteria */
+            if (!(opts&SRCH_AFTER)||((opts&SRCH_AFTER)&&(search_updated_after<=d2))) {
+              fld.class='found';
+              fldMatch=true;
+              srch.foundFlds++;
+            }
+          }
         }
-      }
     }
 
     if (rval){
@@ -320,19 +353,25 @@ x_0081_pvis.VisClassTree = (function() {
             (flds[d.data.group_index].length?
                flds[d.data.group_index].length+' fields.':' no fields.');
         popup.append('p').text(node_desc);
+
         if (flds[d.data.group_index].length) {
           var newUL = popup.append('ul');
-          for (var i=0;i<flds[d.data.group_index].length;i++){
-            var fld = flds[d.data.group_index][i];
+          for (var j=0;j<flds[d.data.group_index].length;j++){
+            var fld = flds[d.data.group_index][j];
             newUL.append('li').text(
                 fld.label+"("+fld.name+"): "+ fld.type+
-                ((fld.type=="Reference")?(' '+fld.reference):'')
+                ((fld.type=="Reference")?(' '+fld.reference):'')+
+                '  '+fld.created_by+'/'+fld.updated_by+' '+fld.updated+
+                ((fld.active=='true')?'':' inactive')
               )
-              .style("color", function(d) {
-                return fld.class==='found'? colors.found : colors.text;
-              });
+              .style("color", (fld.class==='found'? colors.found : colors.text));
           }
         }
+
+        node_desc = 'Created by '+ d.data.created_by +
+          ' and updated by '+ d.data.updated_by +
+          ' on ' + d.data.updated;
+        popup.append('p').text(node_desc);
 
         if (popup.node().offsetWidth + mousePosition[0] > canvas.node().offsetWidth) {
           popup.style("left","auto");
@@ -403,7 +442,7 @@ x_0081_pvis.VisClassTree = (function() {
         .attr('x',function(d) { return nodeTextMargin * (d.children ? -1:1); })
         .attr('text-anchor',function(d) { return d.children ? 'end' : 'start'; })
         .style('opacity',function(d){
-          return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'});
+          return (((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4');});
       });
 
     nodeUpdate.select('circle').attr('r',nodeRadius)
@@ -436,7 +475,7 @@ x_0081_pvis.VisClassTree = (function() {
         return sw;
       })
       .style('opacity',function(d){
-        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'})
+        return (((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4');})
       .attr('cursor',function(d){return d._allchildren?'pointer':'auto';});
 
     /*----- EXIT ------*/
@@ -583,10 +622,14 @@ x_0081_pvis.VisClassTree = (function() {
   },
   Search: function(/*string */sRegex,
     /*boolean */do_names,do_sub_names, do_labels,
-    /*boolean */do_fld_names,do_fld_labels,do_fld_refs,do_with_cnt
+    /*boolean */do_fld_names,do_fld_labels,do_fld_refs,do_with_cnt,
+    /*boolean */do_inactiveflds,
+    /*boolean */do_created_by, do_updated_by,
+    /*string date */do_updated_after
   ) {
     /* setup the regular expression */
-    try { var re = new RegExp(sRegex); }
+	var re;
+    try { re = new RegExp(sRegex); }
     catch(e) { return false; }
 
     var opts=0;
@@ -597,6 +640,15 @@ x_0081_pvis.VisClassTree = (function() {
     if (do_fld_labels) opts |= SRCH_FLD_LABEL;
     if (do_fld_refs)   opts |= SRCH_FLD_REF;
     if (do_with_cnt)   opts |= SRCH_CNT;
+    if (do_inactiveflds)opts|= SRCH_INACT;
+    if (do_created_by) opts |=SRCH_CREATED;
+    if (do_updated_by) opts |=SRCH_UPDATED;
+    if (do_updated_after!='') {
+      opts|=SRCH_AFTER;
+      search_updated_after=Date.parse(do_updated_after);
+    } else{
+      search_updated_after=null;
+    }
 
     /* traverse the tree searching each node */
     var paths = _search(re,opts,root,[]);
@@ -632,14 +684,14 @@ x_0081_pvis.VisClassTree = (function() {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:14:10</sys_created_on>
         <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
-        <sys_mod_count>86</sys_mod_count>
+        <sys_mod_count>107</sys_mod_count>
         <sys_name>x_0081_pvis.VisClassTree</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy/>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_ui_script_b4975959db60320062a5f11fbf961955</sys_update_name>
-        <sys_updated_by>troy.pesola</sys_updated_by>
-        <sys_updated_on>2017-01-30 02:27:11</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-13 00:17:03</sys_updated_on>
         <use_scoped_format>true</use_scoped_format>
     </sys_ui_script>
 </record_update>
