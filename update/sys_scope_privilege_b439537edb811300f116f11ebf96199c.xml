@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_scope_privilege">
+    <sys_scope_privilege action="INSERT_OR_UPDATE">
+        <operation>read</operation>
+        <source_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</source_scope>
+        <status>allowed</status>
+        <sys_class_name>sys_scope_privilege</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-03-28 20:20:03</sys_created_on>
+        <sys_id>b439537edb811300f116f11ebf96199c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>sn_risk_acceptance_task</sys_name>
+        <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
+        <sys_update_name>sys_scope_privilege_b439537edb811300f116f11ebf96199c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-03-28 20:20:03</sys_updated_on>
+        <target_name>sn_risk_acceptance_task</target_name>
+        <target_scope display_value="Risk">f6e4b296cbf33100829cf865734c9c75</target_scope>
+        <target_type>sys_db_object</target_type>
+    </sys_scope_privilege>
+</record_update>

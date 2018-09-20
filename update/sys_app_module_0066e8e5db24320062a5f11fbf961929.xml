@@ -20,8 +20,6 @@
         <query>/x_0081_pvis_classtree.do?cn=alm_asset,cmdb</query>
         <report/>
         <roles/>
-        <survey/>
-        <survey_overwrite>true</survey_overwrite>
         <sys_class_name>sys_app_module</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-01-25 21:12:38</sys_created_on>
