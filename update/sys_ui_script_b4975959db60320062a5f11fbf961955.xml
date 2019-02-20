@@ -92,7 +92,7 @@ x_0081_pvis.VisClassTree = (function() {
   function _dimCalc(lvl, obj) {
     if (lvl==0) {
       /* initialize the dims array */
-      dims = {nodes:[0],pre:[0],post:[0],width:[0]}
+      dims = {nodes:[0],pre:[0],post:[0],width:[0]};
     } else {
       /* check if this level needs to be initialized */
       if (dims.nodes[lvl]===undefined) dims.nodes[lvl]=0;
@@ -129,7 +129,7 @@ x_0081_pvis.VisClassTree = (function() {
   }
 
   /* ----- SEARCH ------------------------------------------ */
-  const SRCH_NAME     =0x01,
+  var SRCH_NAME     =0x01,
         SRCH_SUB_NAME =0x02,
         SRCH_LABEL    =0x04,
         SRCH_FLD_NAME =0x08,
@@ -194,7 +194,8 @@ x_0081_pvis.VisClassTree = (function() {
 
   function _match(re,opts,obj){
     var rval=false;
-
+    var fldMatch=false;
+	  
     /* check if we are only searching with records and this class has */
     if ((!(opts&SRCH_CNT)) ||
          ((opts&SRCH_CNT) && (obj.data.cnt!='0'))) {
@@ -209,7 +210,6 @@ x_0081_pvis.VisClassTree = (function() {
       }
 
       /* search the field information */
-      var fldMatch=false;
       for (var i=0; i<flds[obj.data.group_index].length; i++) {
         srch.nodeFlds++;
         var fld = flds[obj.data.group_index][i];
@@ -314,15 +314,19 @@ x_0081_pvis.VisClassTree = (function() {
             ''+d.data.ref_flds+' referenced-classes, ':
             ' no referenced-classes, ');
         }
-        node_desc += (d.data.cnt && d.data.cnt>0 ?
-              d.data.cnt+' records, ' : ' no records, ')+
-            (flds[d.data.group_index].length?
+		if (d.data.cnt>0) {
+			node_desc += d.data.cnt+' records, ';
+		}
+		else if (d.data.cnt==0) {
+			node_desc += ' no records, ';
+		}
+		node_desc += (flds[d.data.group_index].length?
                flds[d.data.group_index].length+' fields.':' no fields.');
         popup.append('p').text(node_desc);
         if (flds[d.data.group_index].length) {
           var newUL = popup.append('ul');
-          for (var i=0;i<flds[d.data.group_index].length;i++){
-            var fld = flds[d.data.group_index][i];
+          for (var j=0;j<flds[d.data.group_index].length;j++){
+            var fld = flds[d.data.group_index][j];
             newUL.append('li').text(
                 fld.label+"("+fld.name+"): "+ fld.type+
                 ((fld.type=="Reference")?(' '+fld.reference):'')
@@ -402,7 +406,7 @@ x_0081_pvis.VisClassTree = (function() {
         .attr('x',function(d) { return nodeTextMargin * (d.children ? -1:1); })
         .attr('text-anchor',function(d) { return d.children ? 'end' : 'start'; })
         .style('opacity',function(d){
-          return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'});
+          return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4';});
       });
 
     nodeUpdate.select('circle').attr('r',nodeRadius)
@@ -435,7 +439,7 @@ x_0081_pvis.VisClassTree = (function() {
         return sw;
       })
       .style('opacity',function(d){
-        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4'})
+        return ((srch.found+srch.foundFlds==0) || d.class)?'1.0':'0.4';})
       .attr('cursor',function(d){return d._allchildren?'pointer':'auto';});
 
     /*----- EXIT ------*/
@@ -585,7 +589,8 @@ x_0081_pvis.VisClassTree = (function() {
     /*boolean */do_fld_names,do_fld_labels,do_fld_refs,do_with_cnt
   ) {
     /* setup the regular expression */
-    try { var re = new RegExp(sRegex); }
+	var re;
+    try { re = new RegExp(sRegex); }
     catch(e) { return false; }
 
     var opts=0;
@@ -631,15 +636,15 @@ x_0081_pvis.VisClassTree = (function() {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:14:10</sys_created_on>
         <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
-        <sys_mod_count>86</sys_mod_count>
+        <sys_mod_count>89</sys_mod_count>
         <sys_name>x_0081_pvis.VisClassTree</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy/>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_ui_script_b4975959db60320062a5f11fbf961955</sys_update_name>
-        <sys_updated_by>troy.pesola</sys_updated_by>
-        <sys_updated_on>2017-01-30 02:27:11</sys_updated_on>
-        <ui_type/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-02-20 16:23:20</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>true</use_scoped_format>
     </sys_ui_script>
 </record_update>

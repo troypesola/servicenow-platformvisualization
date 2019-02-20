@@ -127,6 +127,13 @@ VisClassUtil.prototype = {
 
     /* initialize the object from parameters */
     var node = {};
+	var fld;
+		
+	/* check the system property for count if it is enabled to ensure */
+	if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
+		do_cnt=0;/* disabled by property */
+	}
+	gs.debug('TRP prop='+gs.getProperty('x_0081_pvis.get_table_counts')+' do_cnt='+do_cnt);
 
     /* set the sub_name */
     var sub_name='';
@@ -199,7 +206,7 @@ VisClassUtil.prototype = {
     grD.query();
     while (grD.next()) {
       /* save the field information */
-      var fld = {};
+      fld = {};
       fld.name = ''+grD.element;
       fld.label = ''+grD.column_label;
       fld.type = ''+grD.internal_type.getDisplayValue();
@@ -231,7 +238,7 @@ VisClassUtil.prototype = {
     if (parse_type==0) {
       /* find the extended tables */
       var grChild = new GlideRecord('sys_db_object');
-      grChild.addQuery('super_class',node.sys_id)
+      grChild.addQuery('super_class',node.sys_id);
       grChild.query();
       while (grChild.next()) {
         this._doNode(parse_type, node.node_name,''+grChild.name, do_cnt);
@@ -239,7 +246,7 @@ VisClassUtil.prototype = {
     } else {
       /* parse referenced classes */
       for (var i=0; i<this.flds[node.group_index].length;i++) {
-        var fld = this.flds[node.group_index][i];
+        fld = this.flds[node.group_index][i];
         if (fld.type!='Reference') { continue; }
         this._doNode(parse_type,node.node_name,fld.reference,do_cnt,fld.name);
         this._addLink(classname, fld.reference, fld.name);
@@ -300,13 +307,13 @@ VisClassUtil.prototype = {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>44</sys_mod_count>
+        <sys_mod_count>49</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-11 19:00:46</sys_updated_on>
+        <sys_updated_on>2019-02-20 17:13:06</sys_updated_on>
     </sys_script_include>
 </record_update>
