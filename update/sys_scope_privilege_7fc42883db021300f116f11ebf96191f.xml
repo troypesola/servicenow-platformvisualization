@@ -16,7 +16,7 @@
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2018-05-17 18:53:10</sys_updated_on>
         <target_name>sn_compliance_control</target_name>
-        <target_scope display_value="Policy and Compliance">4a3281d053030200d23c9c25911c086f</target_scope>
+        <target_scope display_value="">4a3281d053030200d23c9c25911c086f</target_scope>
         <target_type>sys_db_object</target_type>
     </sys_scope_privilege>
 </record_update>

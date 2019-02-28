@@ -3,7 +3,6 @@
         <access>package_private</access>
         <active>true</active>
         <api_name>x_0081_pvis.VisClassUtil</api_name>
-        <caller_access/>
         <client_callable>false</client_callable>
         <description>Platform Visualization Utilities. </description>
         <name>VisClassUtil</name>
@@ -128,7 +127,7 @@ VisClassUtil.prototype = {
     /* initialize the object from parameters */
     var node = {};
 	var fld;
-		
+
 	/* check the system property for count if it is enabled to ensure */
 	if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
 		do_cnt=0;/* disabled by property */
@@ -183,7 +182,7 @@ VisClassUtil.prototype = {
     /* get the database object info */
     var grDBO = new GlideRecord('sys_db_object');
     if (grDBO.get('name',classname)) {
-      node.label = ''+grDBO.label;
+      node.label = GlideStringUtil.escapeHTML(grDBO.label);
       node.super_class = ''+grDBO.super_class;
       node.sys_id = ''+grDBO.sys_id;
     }
@@ -208,7 +207,7 @@ VisClassUtil.prototype = {
       /* save the field information */
       fld = {};
       fld.name = ''+grD.element;
-      fld.label = ''+grD.column_label;
+      fld.label = GlideStringUtil.escapeHTML(grD.column_label);
       fld.type = ''+grD.internal_type.getDisplayValue();
       if (fld.type=='Reference') {
         fld.reference = ''+grD.reference.name;
@@ -276,7 +275,7 @@ VisClassUtil.prototype = {
     /* validate the params */
     src = src || '';
     dst = dst || '';
-    lbl = lbl || '';
+    lbl = GlideStringUtil.escapeHTML(lbl) || '';
 
     var lidx = this._findLink(src,dst);
     if (lidx<0) {
@@ -307,13 +306,13 @@ VisClassUtil.prototype = {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>49</sys_mod_count>
+        <sys_mod_count>50</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2019-02-20 17:13:06</sys_updated_on>
+        <sys_updated_on>2019-02-28 22:49:15</sys_updated_on>
     </sys_script_include>
 </record_update>
