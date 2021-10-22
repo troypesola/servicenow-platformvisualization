@@ -3,6 +3,7 @@
         <access>package_private</access>
         <active>true</active>
         <api_name>x_0081_pvis.VisClassUtil</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Platform Visualization Utilities. </description>
         <name>VisClassUtil</name>
@@ -25,11 +26,13 @@ VisClassUtil.prototype = {
   parse_type:'',
   group_cnt:0,
   nodes: [],
+  unique_flds: [],
   links: [],
   initialize: function(){
     this.parse_type='Extensions';
     this.flds=[];
     this.nodes=[];
+    this.unique_flds=[];
     this.links=[];
   },
 
@@ -126,13 +129,14 @@ VisClassUtil.prototype = {
 
     /* initialize the object from parameters */
     var node = {};
-	var fld;
+    var fld;
+    var is_cmdb= classname.startsWith('cmdb_ci');
 
-	/* check the system property for count if it is enabled to ensure */
-	if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
-		do_cnt=0;/* disabled by property */
-	}
-	gs.debug('TRP prop='+gs.getProperty('x_0081_pvis.get_table_counts')+' do_cnt='+do_cnt);
+    /* check the system property for count if it is enabled to ensure */
+    if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
+    	do_cnt=0;/* disabled by property */
+    }
+    gs.debug('TRP prop='+gs.getProperty('x_0081_pvis.get_table_counts')+' do_cnt='+do_cnt);
 
     /* set the sub_name */
     var sub_name='';
@@ -204,9 +208,15 @@ VisClassUtil.prototype = {
     );
     grD.query();
     while (grD.next()) {
+      /* see if the field is defined in the parents */
+      if (is_cmdb && this._fldExists(''+grD.element)) {
+        /* skip this field */
+        break;
+      }
       /* save the field information */
       fld = {};
       fld.name = ''+grD.element;
+      this.unique_flds.push(fld.name);
       fld.label = GlideStringUtil.escapeHTML(grD.column_label);
       fld.type = ''+grD.internal_type.getDisplayValue();
       if (fld.type=='Reference') {
@@ -253,15 +263,26 @@ VisClassUtil.prototype = {
     }
   },
 
-  _getTables:function(/*string*/classid) {
+  _getTables:function(/*string*/classid, /*boolean*/bIncludeParent) {
+    bIncludeParent = bIncludeParent || true;
     var t = [];
     var gr = new GlideRecord('sys_db_object');
     while ((classid!='') && gr.get(classid)) {
-      t.push(''+gr.name);
+      if (bIncludeParent)
+        t.push(''+gr.name);
       classid = ''+gr.super_class;
     }
     return t.join(',');
   },
+
+  _fldExists: function(/*string*/element) {
+    var i;
+    for (i=0;i<this.unique_flds.length;i++) {
+      if (this.unique_flds[i]==element) { return i; }
+    }
+    return -1;
+  },
+
 
   _nodeExists: function(/*string*/name) {
     var i;
@@ -306,13 +327,13 @@ VisClassUtil.prototype = {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>50</sys_mod_count>
+        <sys_mod_count>52</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2019-02-28 22:49:15</sys_updated_on>
+        <sys_updated_on>2021-10-22 21:14:29</sys_updated_on>
     </sys_script_include>
 </record_update>
