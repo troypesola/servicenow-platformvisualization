@@ -8,9 +8,7 @@
 * Platform Visualization - Client Tools for Class Tree
 *
 *----------------------------------------------------
-*  Troy Pesola - troy@servicemanagementprof.com
-*
-*  http://servicemanagementprof.com/platform-vis
+*  Troy Pesola - troy.pesola@gmail.com
 *----------------------------------------------------
 * UI Script for processing D3 Class Trees
 */
@@ -43,7 +41,7 @@ x_0081_pvis.VisClassTree = (function() {
     };
 
   var svg,tree,root,duration=750;
-  var flds=[], parse_type='Extensions', node_clrs=[
+  var flds=[], parse_type='Extensions', show_class=false, node_clrs=[
     "#015eff", "#0cc402", "#fc0a18", "#aea7a5", "#ff15ae", "#d99f07", "#11a5fe",
     "#037e43", "#ba4455", "#d10aff", "#9354a6", "#7b6d2b", "#08bbbb", "#95b42d",
     "#b54e04", "#ee74ff", "#2d7593", "#e19772", "#fa7fbe", "#fe035b", "#aea0db",
@@ -195,7 +193,7 @@ x_0081_pvis.VisClassTree = (function() {
   function _match(re,opts,obj){
     var rval=false;
     var fldMatch=false;
-	  
+
     /* check if we are only searching with records and this class has */
     if ((!(opts&SRCH_CNT)) ||
          ((opts&SRCH_CNT) && (obj.data.cnt!='0'))) {
@@ -303,7 +301,7 @@ x_0081_pvis.VisClassTree = (function() {
           .style("left", mousePosition[0] + "px")
           .style("top", mousePosition[1] + "px");
         popup.append("h2").text(
-          d.data.label+"("+d.data.node_name+") "+d.data.sub_name);
+          d.data.label+" ("+d.data.node_name+") "+d.data.sub_name);
         var node_desc = '';
         if (parse_type=='Extensions') {
           node_desc += (d._allchildren ?
@@ -382,7 +380,7 @@ x_0081_pvis.VisClassTree = (function() {
     nodeEnter.each(function(d){
       d3.select(this).append('text')
       .attr('dy',(d.data.sub_name!='')?'-.18em':'0.35em')
-      .text(d.data.node_name);
+      .text(show_class ? ''+d.data.node_name : ''+d.data.label);
       if (d.data.sub_name!='') {
         d3.select(this).append('text')
         .attr('dy','.73em')
@@ -542,7 +540,7 @@ x_0081_pvis.VisClassTree = (function() {
   return {
   Setup: function(/*object */json, /*object*/opts) {
     /* initialize the params */
-    if (!json) json = {parse_type:'Extensions',nodes:[],flds:[],links:[]};
+    if (!json) json = {parse_type:'Extensions',show_class:false,nodes:[],flds:[],links:[]};
     opts = opts || {};
 
     /* save the array of fields */
@@ -550,6 +548,7 @@ x_0081_pvis.VisClassTree = (function() {
 
     /* save the type of data - References or Extensions */
     parse_type = json.parse_type||'Extensions';
+    show_class = json.show_class||false;
     if (parse_type=='References') nodeHeight = nodeRefHeight;
 
     svg = d3.select('div#pvis_tree')
@@ -636,14 +635,14 @@ x_0081_pvis.VisClassTree = (function() {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:14:10</sys_created_on>
         <sys_id>b4975959db60320062a5f11fbf961955</sys_id>
-        <sys_mod_count>89</sys_mod_count>
+        <sys_mod_count>95</sys_mod_count>
         <sys_name>x_0081_pvis.VisClassTree</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy/>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_ui_script_b4975959db60320062a5f11fbf961955</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2019-02-20 16:23:20</sys_updated_on>
+        <sys_updated_on>2021-10-22 23:06:12</sys_updated_on>
         <ui_type>0</ui_type>
         <use_scoped_format>true</use_scoped_format>
     </sys_ui_script>
