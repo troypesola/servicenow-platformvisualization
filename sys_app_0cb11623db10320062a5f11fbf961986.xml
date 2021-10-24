@@ -20,7 +20,10 @@
         <runtime_access_tracking>permissive</runtime_access_tracking>
         <scope>x_0081_pvis</scope>
         <scoped_administration>false</scoped_administration>
-        <short_description/>
+        <short_description>Visualize data extensions, data references, and process states/stages.&#13;
+&#13;
+https://github.com/troypesola/servicenow-platformvisualization - app repository&#13;
+https://bitbucket.org/troy_pesola/servicenow-platform-visualization - project repository</short_description>
         <source>x_0081_pvis</source>
         <store_correlation_id/>
         <store_url/>
@@ -29,9 +32,9 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-01-19 23:53:39</sys_created_on>
         <sys_id>0cb11623db10320062a5f11fbf961986</sys_id>
-        <sys_mod_count>7</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2021-10-22 21:27:16</sys_updated_on>
+        <sys_updated_on>2021-10-24 21:27:29</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <uninstall_blocked>false</uninstall_blocked>
