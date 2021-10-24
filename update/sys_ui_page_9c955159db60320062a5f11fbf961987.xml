@@ -95,9 +95,7 @@ ScriptLoader.getScripts([
 *  Class Tree Visualization
 *
 *****************************************************
-*  Troy Pesola - troy@servicemanagementprof.com
-*
-*  http://servicemanagementprof.com/platform-vis
+*  Troy Pesola - troy.pesola@gmail.com
 *****************************************************
 -->
 <j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
@@ -122,10 +120,16 @@ ScriptLoader.getScripts([
 	do_cnt = (do_cnt=='true' || do_cnt=='1')?true:false;
 	do_cnt;
 </g:evaluate>
+<g:evaluate var="jvar_show_class" jelly="true">
+	var show_class = "${RP.getParameterValue('show_class')}";
+	show_class = show_class || 'false';
+	show_class = (show_class=='true' || show_class=='1')?true:false;
+	show_class;
+</g:evaluate>
 <g:evaluate var="jvar_vcu" jelly="true" object="true">
 	var vcu = new VisClassUtil();
-  if (pvis_parse_type=='Extensions') vcu.parseExtensions(pvis_classnames,do_cnt);
-  else vcu.parseReferences(pvis_classnames,do_cnt);
+  if (pvis_parse_type=='Extensions') vcu.parseExtensions(pvis_classnames,do_cnt, show_class);
+  else vcu.parseReferences(pvis_classnames,do_cnt, show_class);
 	vcu;
 </g:evaluate>
 <g:evaluate var="jvar_graph" jelly="true">
@@ -202,13 +206,13 @@ var graph = JSON.parse('${jvar_graph}');
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-25 06:07:24</sys_created_on>
         <sys_id>9c955159db60320062a5f11fbf961987</sys_id>
-        <sys_mod_count>26</sys_mod_count>
+        <sys_mod_count>30</sys_mod_count>
         <sys_name>classtree</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy/>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_ui_page_9c955159db60320062a5f11fbf961987</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-11 19:01:16</sys_updated_on>
+        <sys_updated_on>2021-10-22 23:30:02</sys_updated_on>
     </sys_ui_page>
 </record_update>

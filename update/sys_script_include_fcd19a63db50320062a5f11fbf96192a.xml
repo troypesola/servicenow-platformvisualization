@@ -3,6 +3,7 @@
         <access>package_private</access>
         <active>true</active>
         <api_name>x_0081_pvis.VisClassUtil</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Platform Visualization Utilities. </description>
         <name>VisClassUtil</name>
@@ -13,9 +14,7 @@
 *   Creates JSON objects for D3 rendering.
 *
 *----------------------------------------------------
-*  Troy Pesola - troy@servicemanagementprof.com
-*
-*  http://servicemanagementprof.com/platform-vis
+*  Troy Pesola - troy.pesola@gmail.com
 *----------------------------------------------------
 * Usage:
 *
@@ -23,41 +22,54 @@
 var VisClassUtil = Class.create();
 VisClassUtil.prototype = {
   parse_type:'',
+  show_class:false,
   group_cnt:0,
   nodes: [],
+  unique_flds: [],
+  parent_flds:[],
+  is_cmdb:false,
   links: [],
   initialize: function(){
     this.parse_type='Extensions';
+    this.show_class=false;
     this.flds=[];
     this.nodes=[];
+    this.unique_flds=[];
+    this.parent_flds=[];
+    this.is_cmdb=false;
     this.links=[];
   },
 
-  parseExtensions: function(/* string */classname, /* boolean */do_cnt) {
+  parseExtensions: function(/* string */classname, /* boolean */do_cnt, /*boolean*/show_class) {
     /* initialize params */
     classname = classname || '';
     do_cnt = do_cnt || false;
+    show_class = show_class || false;
 	gs.debug('TRP - parseExtensions');
 
     /* re-initialize */
     this.initialize();
+    this.show_class = show_class;
     this._parse(0,classname,do_cnt);
 	gs.debug('TRP - parseExtensions done');
   },
 
-  parseReferences: function(/* string */classname,/* boolean */do_cnt) {
+  parseReferences: function(/* string */classname,/* boolean */do_cnt, /*boolean*/show_class) {
     /* initialize params */
     classname = classname || '';
     do_cnt = do_cnt || false;
+    show_class = show_class || false;
 
     /* re-initialize */
     this.initialize();
+    this.show_class = show_class;
     this.parse_type='References';
     this._parse(1,classname,do_cnt);
   },
   getGraph: function() {
     return {
       'parse_type':this.parse_type,
+      'show_class':this.show_class,
       'nodes':this.nodes,
       'flds':this.flds,
       'links':this.links
@@ -67,6 +79,7 @@ VisClassUtil.prototype = {
     spc = spc || '';
     var json_str = JSON.stringify({
       'parse_type':this.parse_type,
+      'show_class':this.show_class,
       'nodes':this.nodes,
       'flds':this.flds,
       'links':this.links
@@ -95,17 +108,18 @@ VisClassUtil.prototype = {
       if (classname.indexOf(',')>=1) {
         /* list - so create dummy base node */
         /* create a dummy parent for the group */
-        this._doNode(parse_type,'','classgroup',false,-1);
+        this._doNode(parse_type,'',-1, 'classgroup',false,-1);
 
         /* now loop through the array of classes */
         var classnames = classname.split(',');
         for (var i=0;i<classnames.length; i++) {
           /* parse this node */
-          node = this._doNode(parse_type,'classgroup',classnames[i], do_cnt,'.');
+          this.unique_flds = []; /* empty out the unique fields for each */
+          node = this._doNode(parse_type,'classgroup',-1, classnames[i], do_cnt,'.');
         }
       } else {
         /* parse the node */
-        node = this._doNode(parse_type, '',classname,do_cnt);
+        node = this._doNode(parse_type, '',-1,classname,do_cnt);
       }
     }
   },
@@ -113,6 +127,7 @@ VisClassUtil.prototype = {
   _doNode: function (
     /*integer */parse_type,
     /*string */parent_classname,
+    /*integer*/parent_group_index,
     /*string */classname,
     /*boolean */do_cnt,
     /*string (optional)*/alt_name
@@ -120,19 +135,24 @@ VisClassUtil.prototype = {
     /* check the parameters */
     parse_type = parse_type || 0;
     parent_classname = parent_classname || '';
+    parent_group_index = parent_group_index || -1;
     classname = classname || '';
     do_cnt = do_cnt || false;
     alt_name = alt_name || '';
 
     /* initialize the object from parameters */
     var node = {};
-	var fld;
+    var node_flds=[];
+    var fld;
+    if (!parse_type && !this.is_cmdb && classname.startsWith('cmdb_ci')) {
+      /* toggle cmdb inheritance checking */
+      this.is_cmdb = true;
+    }
 
-	/* check the system property for count if it is enabled to ensure */
-	if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
-		do_cnt=0;/* disabled by property */
-	}
-	gs.debug('TRP prop='+gs.getProperty('x_0081_pvis.get_table_counts')+' do_cnt='+do_cnt);
+    /* check the system property for count if it is enabled to ensure */
+    if (do_cnt && (gs.getProperty('x_0081_pvis.get_table_counts')!='true')) {
+    	do_cnt=0;/* disabled by property */
+    }
 
     /* set the sub_name */
     var sub_name='';
@@ -169,6 +189,7 @@ VisClassUtil.prototype = {
 
     /* add to the fields array */
     node.group_index = this.flds.push([])-1;
+    this.parent_flds[node.group_index]=[];
 
     node.ref_flds = 0;
     node.label = 'Class';
@@ -204,9 +225,22 @@ VisClassUtil.prototype = {
     );
     grD.query();
     while (grD.next()) {
+      if (!parse_type && this.is_cmdb) {
+        /* add the field to this table's fld list */
+        var tmpStr=''+grD.element;
+        this.parent_flds[node.group_index].push(tmpStr);
+
+        /* see if the field is defined in the parents */
+        if (this._fldExists(parent_group_index,tmpStr)) {
+          /* skip this field */
+          continue;
+        }
+      }
+
       /* save the field information */
       fld = {};
       fld.name = ''+grD.element;
+      node_flds.push(fld.name);
       fld.label = GlideStringUtil.escapeHTML(grD.column_label);
       fld.type = ''+grD.internal_type.getDisplayValue();
       if (fld.type=='Reference') {
@@ -239,28 +273,46 @@ VisClassUtil.prototype = {
       var grChild = new GlideRecord('sys_db_object');
       grChild.addQuery('super_class',node.sys_id);
       grChild.query();
-      while (grChild.next()) {
-        this._doNode(parse_type, node.node_name,''+grChild.name, do_cnt);
+      if (grChild.hasNext()) {
+        /* add the nodes fields to the list and parse down */
+        this.unique_flds = this.unique_flds.concat(node_flds);
+
+        while (grChild.next()) {
+          /* parse down */
+          this._doNode(parse_type, node.node_name,node.group_index,''+grChild.name, do_cnt);
+        }
+        /* restore the unique fields to just this level */
+        this.unique_flds.splice(-node_flds.length);
+
       }
     } else {
       /* parse referenced classes */
       for (var i=0; i<this.flds[node.group_index].length;i++) {
         fld = this.flds[node.group_index][i];
         if (fld.type!='Reference') { continue; }
-        this._doNode(parse_type,node.node_name,fld.reference,do_cnt,fld.name);
+        this._doNode(parse_type,node.node_name,node.group_index,fld.reference,do_cnt,fld.name);
         this._addLink(classname, fld.reference, fld.name);
       }
     }
   },
 
-  _getTables:function(/*string*/classid) {
+  _getTables:function(/*string*/classid, /*boolean*/bIncludeParent) {
+    bIncludeParent = bIncludeParent || true;
     var t = [];
     var gr = new GlideRecord('sys_db_object');
     while ((classid!='') && gr.get(classid)) {
-      t.push(''+gr.name);
+      if (bIncludeParent)
+        t.push(''+gr.name);
       classid = ''+gr.super_class;
     }
     return t.join(',');
+  },
+
+  _fldExists: function(/*integer*/parent_group_index, /*string*/element) {
+    if (parent_group_index<0) return false;
+    if (element.startsWith('managed_by'))
+      gs.debug('TRP _fldExists parent_group_index='+parent_group_index+' element='+element+' indexOf='+this.parent_flds[parent_group_index].indexOf(element));
+    return (this.parent_flds[parent_group_index].indexOf(element)>-1);
   },
 
   _nodeExists: function(/*string*/name) {
@@ -306,13 +358,13 @@ VisClassUtil.prototype = {
         <sys_created_by>troy.pesola</sys_created_by>
         <sys_created_on>2017-01-19 23:55:38</sys_created_on>
         <sys_id>fcd19a63db50320062a5f11fbf96192a</sys_id>
-        <sys_mod_count>50</sys_mod_count>
+        <sys_mod_count>76</sys_mod_count>
         <sys_name>VisClassUtil</sys_name>
         <sys_package display_value="Platform Visualization" source="x_0081_pvis">0cb11623db10320062a5f11fbf961986</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Platform Visualization">0cb11623db10320062a5f11fbf961986</sys_scope>
         <sys_update_name>sys_script_include_fcd19a63db50320062a5f11fbf96192a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2019-02-28 22:49:15</sys_updated_on>
+        <sys_updated_on>2021-10-24 14:53:05</sys_updated_on>
     </sys_script_include>
 </record_update>
